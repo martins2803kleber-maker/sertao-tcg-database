@@ -11,6 +11,12 @@ OUT_DIR = ROOT / "data"
 OUT_FILE = OUT_DIR / "pokemon.json"
 TCGDEX_BASE = "https://api.tcgdex.net/v2"
 
+SET_ALIASES = {
+    "m6": "Delta Reign / Storm Emeralda",
+    "30c": "30th Celebration",
+    "30th": "30th Celebration",
+}
+
 
 def clean_list(value):
     if not isinstance(value, list):
@@ -83,7 +89,7 @@ def normalize_card(card, sets_by_id):
 
 
 def get_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "SertaoTCG/5.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "SertaoTCG/6.0"})
     with urllib.request.urlopen(req, timeout=180) as response:
         return json.load(response)
 
@@ -105,6 +111,17 @@ def fetch_tcgdex(lang):
     return cards
 
 
+def fetch_tcgdex_sets(lang):
+    try:
+        rows = get_json(f"{TCGDEX_BASE}/{lang}/sets")
+    except Exception as exc:
+        print(f"TCGdex {lang} sets unavailable: {exc}")
+        return {}
+    if not isinstance(rows, list):
+        return {}
+    return {str(row.get("id", "")).strip(): row for row in rows if isinstance(row, dict) and row.get("id")}
+
+
 def image_urls(raw):
     image_base = str(raw.get("image", "") or "").rstrip("/")
     if not image_base:
@@ -112,10 +129,26 @@ def image_urls(raw):
     return f"{image_base}/low.webp", f"{image_base}/high.webp"
 
 
-def normalize_tcgdex(raw, lang):
+def display_set_name(set_id, set_info):
+    sid = str(set_id or "").strip()
+    alias = SET_ALIASES.get(sid.casefold())
+    if alias:
+        return alias
+    name = str((set_info or {}).get("name", "") or "").strip()
+    low = name.casefold()
+    if "storm emeralda" in low:
+        return "Delta Reign / Storm Emeralda"
+    if "30th celebration" in low or "30th anniversary" in low:
+        return "30th Celebration"
+    return name or sid
+
+
+def normalize_tcgdex(raw, lang, set_map):
     original_id = str(raw.get("id", "")).strip()
     set_id = original_id.rsplit("-", 1)[0] if "-" in original_id else ""
+    set_info = set_map.get(set_id, {})
     image, image_large = image_urls(raw)
+    set_name = display_set_name(set_id, set_info)
     return {
         "id": original_id,
         "originalId": original_id,
@@ -125,9 +158,9 @@ def normalize_tcgdex(raw, lang):
         "nameJa": str(raw.get("name", "") or "").strip() if lang == "ja" else "",
         "number": str(raw.get("localId", "") or "").strip(),
         "setId": set_id,
-        "set": set_id,
-        "series": "",
-        "releaseDate": "",
+        "set": set_name,
+        "series": str(set_info.get("serie", {}).get("name", "") if isinstance(set_info.get("serie"), dict) else set_info.get("serie", "") or ""),
+        "releaseDate": str(set_info.get("releaseDate", "") or ""),
         "rarity": "",
         "supertype": "",
         "subtypes": [],
@@ -167,10 +200,21 @@ def merge_language(existing, incoming):
     elif not merged.get("name"):
         merged["name"] = incoming.get("name", "")
 
-    if not merged.get("image") and incoming.get("image"):
-        merged["image"] = incoming["image"]
-    if not merged.get("imageLarge") and incoming.get("imageLarge"):
-        merged["imageLarge"] = incoming["imageLarge"]
+    # TCGdex CDN is our preferred image fallback. It fixes old/broken image links
+    # without changing the rich metadata from PokemonTCG/pokemon-tcg-data.
+    if str(incoming.get("source", "")).startswith("TCGdex"):
+        if incoming.get("image"):
+            merged["image"] = incoming["image"]
+        if incoming.get("imageLarge"):
+            merged["imageLarge"] = incoming["imageLarge"]
+
+    if not merged.get("set") or merged.get("set") == merged.get("setId"):
+        if incoming.get("set"):
+            merged["set"] = incoming["set"]
+    if not merged.get("series") and incoming.get("series"):
+        merged["series"] = incoming["series"]
+    if not merged.get("releaseDate") and incoming.get("releaseDate"):
+        merged["releaseDate"] = incoming["releaseDate"]
 
     sources = []
     for src in str(merged.get("source", "")).split(" + ") + str(incoming.get("source", "")).split(" + "):
@@ -206,13 +250,17 @@ def main():
                 official_count += 1
 
     coverage = {"officialEnglish": official_count}
+    tcgdex_sets_en = fetch_tcgdex_sets("en")
+    tcgdex_sets_ja = fetch_tcgdex_sets("ja")
+    coverage["tcgdex_en_sets"] = len(tcgdex_sets_en)
+    coverage["tcgdex_ja_sets"] = len(tcgdex_sets_ja)
 
     try:
         briefs_en = fetch_tcgdex("en")
         coverage["tcgdex_en"] = len(briefs_en)
         en_added = 0
         for raw in briefs_en:
-            card = normalize_tcgdex(raw, "en")
+            card = normalize_tcgdex(raw, "en", tcgdex_sets_en)
             cid = card["originalId"]
             if not cid or not card["name"]:
                 continue
@@ -232,7 +280,7 @@ def main():
         ja_only_added = 0
         ja_skipped_no_image = 0
         for raw in briefs_ja:
-            card = normalize_tcgdex(raw, "ja")
+            card = normalize_tcgdex(raw, "ja", tcgdex_sets_ja)
             cid = card["originalId"]
             if not cid or not card["name"]:
                 continue
@@ -240,8 +288,6 @@ def main():
                 store[cid] = merge_language(store[cid], card)
                 ja_merged += 1
                 continue
-            # A Japanese-only printing is useful only when it has a real scan.
-            # This prevents blank/broken cards in the public catalog.
             if not card.get("image"):
                 ja_skipped_no_image += 1
                 continue
@@ -253,7 +299,6 @@ def main():
     except Exception as exc:
         print(f"TCGdex ja unavailable: {exc}")
 
-    # Final hard guarantee: never publish a card without an image.
     before_image_filter = len(store)
     store = {k: v for k, v in store.items() if v.get("image") or v.get("imageLarge")}
     coverage["removedWithoutImageFinal"] = before_image_filter - len(store)
@@ -263,6 +308,8 @@ def main():
     coverage["mergedSearchableRecords"] = len(cards)
     coverage["japaneseOnlySearchable"] = sum(1 for c in cards if c.get("language") == "ja" and c.get("languages") == ["ja"])
     coverage["multilingualMerged"] = sum(1 for c in cards if "ja" in (c.get("languages") or []) and "en" in (c.get("languages") or []))
+    coverage["deltaReignStormEmeraldaRecords"] = sum(1 for c in cards if "delta reign" in c.get("set", "").casefold() or "storm emeralda" in c.get("set", "").casefold() or c.get("setId", "").casefold() == "m6")
+    coverage["celebration30Records"] = sum(1 for c in cards if "30th celebration" in c.get("set", "").casefold() or c.get("setId", "").casefold() in {"30c", "30th"})
 
     meta = {
         "languages": sorted_unique(lang for c in cards for lang in (c.get("languages") or [c.get("language", "")])),
@@ -273,7 +320,7 @@ def main():
         "sets": sorted_unique(c["set"] for c in cards),
     }
     payload = {
-        "source": "PokemonTCG English + TCGdex English/Japanese (language-deduplicated)",
+        "source": "PokemonTCG English + TCGdex English/Japanese with current set metadata and CDN image repair",
         "language": "en with ja metadata / ja-only when unique",
         "count": len(cards),
         "coverage": coverage,
