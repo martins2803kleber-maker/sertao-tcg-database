@@ -3,8 +3,7 @@ name: Atualizar banco One Piece
 on:
   workflow_dispatch:
   push:
-    branches:
-      - main
+    branches: [main]
     paths:
       - 'scripts/build_onepiece.py'
       - '.github/workflows/update-onepiece.yml'
@@ -14,31 +13,36 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: onepiece-database-update
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Sertao TCG database
         uses: actions/checkout@v4
-
       - name: Checkout primary One Piece dataset
         uses: actions/checkout@v4
         with:
           repository: Kuroro1990/OPTCG
           path: source/optcg
           fetch-depth: 1
-
       - name: Checkout secondary One Piece dataset
         uses: actions/checkout@v4
         with:
           repository: apitcg/one-piece-tcg-data
           path: source/apitcg
           fetch-depth: 1
-
+      - name: Checkout additional One Piece API dataset
+        uses: actions/checkout@v4
+        with:
+          repository: arjunkai/optcg-api
+          path: source/optcgapi
+          fetch-depth: 1
       - name: Build merged One Piece database
         run: python scripts/build_onepiece.py
-
       - name: Commit database when changed
         run: |
           git config user.name "sertao-tcg-bot"
@@ -48,5 +52,6 @@ jobs:
             echo "Banco One Piece ja esta atualizado."
           else
             git commit -m "Atualiza banco One Piece"
-            git push
+            git pull --rebase origin main
+            git push origin main
           fi
