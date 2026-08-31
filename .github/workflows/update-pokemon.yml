@@ -9,7 +9,7 @@ on:
       - 'scripts/**'
       - '.github/workflows/update-pokemon.yml'
   schedule:
-    - cron: '17 6 * * *'
+    - cron: '17 */6 * * *'
 
 permissions:
   contents: write
@@ -28,7 +28,7 @@ jobs:
           path: source/pokemon-tcg-data
           fetch-depth: 1
 
-      - name: Build lightweight database
+      - name: Build merged Pokemon database
         run: python scripts/build_pokemon.py
 
       - name: Commit database when changed
@@ -37,7 +37,7 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add data/pokemon.json
           if git diff --cached --quiet; then
-            echo "Banco ja esta atualizado."
+            echo "Banco Pokemon ja esta atualizado."
           else
             git commit -m "Atualiza banco Pokemon"
             git push
