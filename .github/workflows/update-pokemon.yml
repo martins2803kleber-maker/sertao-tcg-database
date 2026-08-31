@@ -7,6 +7,7 @@ on:
       - main
     paths:
       - 'scripts/build_pokemon.py'
+      - 'scripts/augment_pokemon_upcoming.py'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -36,6 +37,9 @@ jobs:
 
       - name: Build merged Pokemon database
         run: python scripts/build_pokemon.py
+
+      - name: Add currently revealed Delta Reign and 30th Celebration cards
+        run: python scripts/augment_pokemon_upcoming.py
 
       - name: Commit database when changed
         run: |
