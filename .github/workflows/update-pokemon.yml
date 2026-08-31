@@ -8,6 +8,7 @@ on:
     paths:
       - 'scripts/build_pokemon.py'
       - 'scripts/augment_pokemon_upcoming.py'
+      - 'scripts/augment_multilingual_names.py'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -40,6 +41,9 @@ jobs:
 
       - name: Add currently revealed Delta Reign and 30th Celebration cards
         run: python scripts/augment_pokemon_upcoming.py
+
+      - name: Add Portuguese, English and Japanese names
+        run: python scripts/augment_multilingual_names.py pokemon
 
       - name: Commit database when changed
         run: |
