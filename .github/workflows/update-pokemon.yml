@@ -6,7 +6,7 @@ on:
     branches:
       - main
     paths:
-      - 'scripts/**'
+      - 'scripts/build_pokemon.py'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -14,12 +14,18 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: pokemon-database-update
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Sertao TCG database
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Checkout official Pokemon TCG data
         uses: actions/checkout@v4
@@ -40,5 +46,6 @@ jobs:
             echo "Banco Pokemon ja esta atualizado."
           else
             git commit -m "Atualiza banco Pokemon"
-            git push
+            git pull --rebase origin main
+            git push origin main
           fi
