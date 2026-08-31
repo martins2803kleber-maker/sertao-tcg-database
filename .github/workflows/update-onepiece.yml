@@ -41,6 +41,9 @@ jobs:
           path: source/apitcg
           fetch-depth: 1
 
+      - name: Sync latest main before generating
+        run: git pull --rebase origin main
+
       - name: Install vegapull
         run: cargo install vegapull --locked --version 1.3.0
 
