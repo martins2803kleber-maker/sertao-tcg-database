@@ -13,12 +13,25 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: yugioh-database-update
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Sertao TCG database
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download Japanese Yu-Gi-Oh card database
+        run: |
+          mkdir -p source/yugioh-ja
+          curl -L --fail --retry 3 \
+            https://raw.githubusercontent.com/mycard/ygopro-database/master/locales/ja-JP/cards.cdb \
+            -o source/yugioh-ja/cards.cdb
 
       - name: Build merged Yu-Gi-Oh database
         run: python scripts/build_yugioh.py
@@ -32,5 +45,6 @@ jobs:
             echo "Banco Yu-Gi-Oh ja esta atualizado."
           else
             git commit -m "Atualiza banco Yu-Gi-Oh"
-            git push
+            git pull --rebase origin main
+            git push origin main
           fi
