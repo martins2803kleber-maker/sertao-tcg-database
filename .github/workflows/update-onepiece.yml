@@ -9,7 +9,7 @@ on:
       - 'scripts/build_onepiece.py'
       - '.github/workflows/update-onepiece.yml'
   schedule:
-    - cron: '37 6 * * *'
+    - cron: '37 */6 * * *'
 
 permissions:
   contents: write
@@ -22,14 +22,21 @@ jobs:
       - name: Checkout Sertao TCG database
         uses: actions/checkout@v4
 
-      - name: Checkout One Piece dataset
+      - name: Checkout primary One Piece dataset
         uses: actions/checkout@v4
         with:
           repository: Kuroro1990/OPTCG
           path: source/optcg
           fetch-depth: 1
 
-      - name: Build One Piece database
+      - name: Checkout secondary One Piece dataset
+        uses: actions/checkout@v4
+        with:
+          repository: apitcg/one-piece-tcg-data
+          path: source/apitcg
+          fetch-depth: 1
+
+      - name: Build merged One Piece database
         run: python scripts/build_onepiece.py
 
       - name: Commit database when changed
