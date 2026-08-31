@@ -6,6 +6,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/build_onepiece.py'
+      - 'scripts/augment_multilingual_names.py'
       - '.github/workflows/update-onepiece.yml'
   schedule:
     - cron: '37 */6 * * *'
@@ -57,6 +58,9 @@ jobs:
 
       - name: Build merged One Piece database
         run: python scripts/build_onepiece.py
+
+      - name: Add English and Japanese card-name fields
+        run: python scripts/augment_multilingual_names.py onepiece
 
       - name: Commit database when changed
         run: |

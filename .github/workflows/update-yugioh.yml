@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'scripts/build_yugioh.py'
+      - 'scripts/augment_multilingual_names.py'
       - '.github/workflows/update-yugioh.yml'
   workflow_dispatch:
   schedule:
@@ -35,6 +36,9 @@ jobs:
 
       - name: Build merged Yu-Gi-Oh database
         run: python scripts/build_yugioh.py
+
+      - name: Add Portuguese, English and Japanese names
+        run: python scripts/augment_multilingual_names.py yugioh
 
       - name: Commit database when changed
         run: |
