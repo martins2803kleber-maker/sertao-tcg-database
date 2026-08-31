@@ -2,6 +2,7 @@ import json
 import re
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from html.parser import HTMLParser
 from pathlib import Path
 
@@ -32,9 +33,21 @@ class ImgParser(HTMLParser):
 
 
 def fetch_text(url):
-    req = urllib.request.Request(url, headers={'User-Agent': 'SertaoTCG/7.0 (+card catalog updater)'})
+    req = urllib.request.Request(url, headers={'User-Agent': 'SertaoTCG/7.1 (+card catalog updater)'})
     with urllib.request.urlopen(req, timeout=180) as response:
         return response.read().decode('utf-8', errors='replace')
+
+
+def image_works(url):
+    if not url:
+        return False
+    req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 SertaoTCG/7.1', 'Range': 'bytes=0-1023'})
+    try:
+        with urllib.request.urlopen(req, timeout=8) as response:
+            ctype = str(response.headers.get('Content-Type', '')).lower()
+            return response.status in (200, 206) and ('image' in ctype or 'octet-stream' in ctype)
+    except Exception:
+        return False
 
 
 def unwrap_next_image(src, base):
@@ -48,7 +61,7 @@ def unwrap_next_image(src, base):
     return src
 
 
-def blank_card(cid, name, number, set_id, set_name, rarity, image, language, source):
+def blank_card(cid, name, number, set_id, set_name, rarity, image, language, source, fallbacks=None):
     return {
         'id': cid,
         'originalId': cid,
@@ -81,6 +94,7 @@ def blank_card(cid, name, number, set_id, set_name, rarity, image, language, sou
         'legalities': {'standard': '', 'expanded': '', 'unlimited': ''},
         'image': image,
         'imageLarge': image,
+        '_fallbackImages': fallbacks or [],
         'source': source,
     }
 
@@ -96,19 +110,17 @@ def parse_delta(html):
             continue
         name = m.group(1).strip()
         number = m.group(2)
-        # Avoid generic page/banner images whose alt happens to contain the set title.
         if not name or len(name) > 80:
             continue
-        image = unwrap_next_image(src, 'https://tcgscreener.com')
-        if not image:
-            # Scrydex image URLs follow this stable public pattern for the M6 catalog.
-            image = f'https://images.scrydex.com/pokemon/m6_ja-{int(number)}/medium'
+        page_image = unwrap_next_image(src, 'https://tcgscreener.com') if src else ''
+        scrydex = f'https://images.scrydex.com/pokemon/m6_ja-{int(number)}/medium'
         rarity_match = re.search(r'\b(C|U|R|RR|AR|SR|SAR|MUR)\b', alt)
         rarity = rarity_match.group(1) if rarity_match else ''
         cid = f'M6-{number}'
         out[cid] = blank_card(
             cid, name, number, 'M6', 'Delta Reign / Storm Emeralda', rarity,
-            image, 'ja', 'TCGscreener + Scrydex Storm Emeralda public catalog'
+            scrydex, 'ja', 'TCGscreener + Scrydex Storm Emeralda public catalog',
+            [page_image] if page_image and page_image != scrydex else []
         )
     return list(out.values())
 
@@ -119,27 +131,26 @@ def parse_30c(html):
     for alt, src in parser.images:
         if '30th celebration' not in alt.casefold():
             continue
-        # Numbered main-set/secret cards, e.g. 012/128 or 158/128.
         m = re.search(r'(.+?)\s+(\d{3})/128(?:\b|,)', alt)
         if m:
             name = m.group(1).strip()
             number = m.group(2)
             if name and len(name) <= 80:
-                image = unwrap_next_image(src, 'https://tcgscreener.com')
-                if not image:
-                    image = f'https://tcgscreener.com/guides/30th-celebration/cards/30c-{number}.webp'
+                page_image = unwrap_next_image(src, 'https://tcgscreener.com') if src else ''
+                fallback = f'https://tcgscreener.com/guides/30th-celebration/cards/30c-{number}.webp'
+                image = page_image or fallback
                 cid = f'30C-{number}'
                 out[cid] = blank_card(
                     cid, name, number, '30C', '30th Celebration', '', image, 'en',
-                    'TCGscreener revealed-card catalog using official revealed imagery'
+                    'TCGscreener revealed-card catalog using official revealed imagery',
+                    [fallback] if fallback != image else []
                 )
             continue
-        # Promos with an official image, e.g. MEP 099.
         pm = re.search(r'(.+?)\s+MEP\s+(\d{3})\s+promo', alt, flags=re.I)
         if pm:
             name = pm.group(1).strip()
             number = pm.group(2)
-            image = unwrap_next_image(src, 'https://tcgscreener.com')
+            image = unwrap_next_image(src, 'https://tcgscreener.com') if src else ''
             if image:
                 cid = f'MEP-{number}'
                 out[cid] = blank_card(
@@ -147,6 +158,34 @@ def parse_30c(html):
                     'TCGscreener 30th Celebration promo catalog'
                 )
     return list(out.values())
+
+
+def verify_cards(cards):
+    def check(card):
+        candidates = []
+        for u in [card.get('image'), card.get('imageLarge')] + list(card.get('_fallbackImages') or []):
+            if u and u not in candidates:
+                candidates.append(u)
+        for u in candidates:
+            if image_works(u):
+                fixed = dict(card)
+                fixed['image'] = u
+                fixed['imageLarge'] = u
+                fixed.pop('_fallbackImages', None)
+                return fixed
+        return None
+
+    good = []
+    with ThreadPoolExecutor(max_workers=16) as pool:
+        futures = [pool.submit(check, c) for c in cards]
+        for future in as_completed(futures):
+            try:
+                card = future.result()
+            except Exception:
+                card = None
+            if card:
+                good.append(card)
+    return good
 
 
 def add_or_repair(store, incoming):
@@ -166,13 +205,14 @@ def main():
     payload = json.loads(DB_FILE.read_text(encoding='utf-8'))
     cards = payload.get('cards') or []
     store = {str(c.get('id')): c for c in cards if c.get('id')}
-    stats = {'deltaAdded': 0, 'celebration30Added': 0, 'imagesRepaired': 0}
-
+    stats = {'deltaAdded': 0, 'celebration30Added': 0, 'imagesRepaired': 0, 'upcomingBrokenImagesSkipped': 0}
     for kind, url in SOURCES:
         try:
             html = fetch_text(url)
-            fresh = parse_delta(html) if kind == 'delta' else parse_30c(html)
-            print(f'{kind}: parsed {len(fresh)} cards with images from current reveal page')
+            parsed = parse_delta(html) if kind == 'delta' else parse_30c(html)
+            fresh = verify_cards(parsed)
+            stats['upcomingBrokenImagesSkipped'] += len(parsed) - len(fresh)
+            print(f'{kind}: parsed {len(parsed)}, verified {len(fresh)} cards with working images')
             for card in fresh:
                 result = add_or_repair(store, card)
                 if result == 'added':
@@ -181,12 +221,11 @@ def main():
                     stats['imagesRepaired'] += 1
         except Exception as exc:
             print(f'Upcoming supplement {kind} unavailable: {exc}')
-
-    # No blank-image entries are allowed in the public database.
     store = {k: v for k, v in store.items() if v.get('image') or v.get('imageLarge')}
     cards = list(store.values())
+    for c in cards:
+        c.pop('_fallbackImages', None)
     cards.sort(key=lambda c: (str(c.get('name', '')).casefold(), str(c.get('set', '')), str(c.get('number', '')), str(c.get('id', ''))))
-
     coverage = payload.setdefault('coverage', {})
     coverage.update(stats)
     coverage['deltaReignStormEmeraldaRecords'] = sum(1 for c in cards if c.get('setId', '').casefold() == 'm6' or 'delta reign' in str(c.get('set', '')).casefold())
@@ -194,16 +233,12 @@ def main():
     coverage['mergedSearchableRecords'] = len(cards)
     payload['count'] = len(cards)
     payload['cards'] = cards
-
     meta = payload.setdefault('meta', {})
     meta['sets'] = sorted({str(c.get('set', '')).strip() for c in cards if str(c.get('set', '')).strip()}, key=str.casefold)
-    payload['source'] = str(payload.get('source', '')) + ' + revealed Delta Reign/30th Celebration supplement'
-
+    payload['source'] = str(payload.get('source', '')) + ' + verified revealed Delta Reign/30th Celebration supplement'
     DB_FILE.write_text(json.dumps(payload, ensure_ascii=False, separators=(',', ':')), encoding='utf-8')
-    print(f'Pokemon final count after upcoming supplement: {len(cards)}')
+    print(f'Pokemon final count after verified upcoming supplement: {len(cards)}')
     print(stats)
-    print(f"Delta Reign/Storm Emeralda: {coverage['deltaReignStormEmeraldaRecords']}")
-    print(f"30th Celebration: {coverage['celebration30Records']}")
 
 
 if __name__ == '__main__':
