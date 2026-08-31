@@ -46,7 +46,16 @@ def main():
     if PACKS_FILE.exists():
         try:
             packs = json.loads(PACKS_FILE.read_text(encoding="utf-8"))
-            for p in packs:
+            if isinstance(packs, dict):
+                pack_iter = packs.values()
+            elif isinstance(packs, list):
+                pack_iter = packs
+            else:
+                pack_iter = []
+
+            for p in pack_iter:
+                if not isinstance(p, dict):
+                    continue
                 pid = str(p.get("id", ""))
                 title = (p.get("title_parts") or {}).get("title") or p.get("raw_title") or pid
                 pack_titles[pid] = title
@@ -56,17 +65,25 @@ def main():
     cards = []
     seen = set()
 
-    for file in sorted(CARDS_DIR.glob("*.json")):
+    # The upstream dataset stores one JSON file per card inside pack subfolders.
+    for file in sorted(CARDS_DIR.rglob("*.json")):
         try:
-            raw_cards = json.loads(file.read_text(encoding="utf-8"))
+            parsed = json.loads(file.read_text(encoding="utf-8"))
         except Exception as exc:
-            print(f"Skipping {file.name}: {exc}")
+            print(f"Skipping {file}: {exc}")
             continue
 
-        if not isinstance(raw_cards, list):
+        if isinstance(parsed, dict):
+            raw_cards = [parsed]
+        elif isinstance(parsed, list):
+            raw_cards = parsed
+        else:
             continue
 
         for raw in raw_cards:
+            if not isinstance(raw, dict):
+                continue
+
             card = normalize_card(raw, pack_titles)
             if not card["name"] or not card["id"]:
                 continue
@@ -80,7 +97,6 @@ def main():
 
     cards.sort(key=lambda c: (c["name"].casefold(), c["id"], c["packId"], c["image"]))
 
-    # Metadata for robust client-side filters.
     meta = {
         "colors": sorted({x for c in cards for x in c["colors"] if x}),
         "categories": sorted({c["category"] for c in cards if c["category"]}),
