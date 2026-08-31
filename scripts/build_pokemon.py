@@ -1,6 +1,8 @@
 import json
+import urllib.error
 import urllib.parse
 import urllib.request
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -89,7 +91,7 @@ def normalize_card(card, sets_by_id):
 
 
 def get_json(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "SertaoTCG/6.0"})
+    req = urllib.request.Request(url, headers={"User-Agent": "SertaoTCG/6.1"})
     with urllib.request.urlopen(req, timeout=180) as response:
         return json.load(response)
 
@@ -127,6 +129,63 @@ def image_urls(raw):
     if not image_base:
         return "", ""
     return f"{image_base}/low.webp", f"{image_base}/high.webp"
+
+
+def url_works(url):
+    if not url:
+        return False
+    headers = {"User-Agent": "Mozilla/5.0 SertaoTCG/6.1", "Range": "bytes=0-1023"}
+    req = urllib.request.Request(url, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=8) as response:
+            ctype = str(response.headers.get("Content-Type", "")).lower()
+            return response.status in (200, 206) and ("image" in ctype or "octet-stream" in ctype)
+    except Exception:
+        return False
+
+
+def verify_risky_images(cards):
+    risky = [c for c in cards if c.get("language") == "ja" and c.get("languages") == ["ja"]]
+    repaired = 0
+    removed = 0
+
+    def check(card):
+        small = card.get("image", "")
+        large = card.get("imageLarge", "")
+        if url_works(small):
+            return card, "ok"
+        if url_works(large):
+            card = dict(card)
+            card["image"] = large
+            return card, "repaired"
+        return card, "remove"
+
+    results = {}
+    with ThreadPoolExecutor(max_workers=24) as pool:
+        futures = {pool.submit(check, c): c.get("id") for c in risky}
+        for future in as_completed(futures):
+            cid = futures[future]
+            try:
+                card, status = future.result()
+            except Exception:
+                status = "remove"
+                card = None
+            results[cid] = (card, status)
+
+    out = []
+    for card in cards:
+        cid = card.get("id")
+        if cid not in results:
+            out.append(card)
+            continue
+        checked, status = results[cid]
+        if status == "remove":
+            removed += 1
+            continue
+        if status == "repaired":
+            repaired += 1
+        out.append(checked)
+    return out, repaired, removed
 
 
 def display_set_name(set_id, set_info):
@@ -194,20 +253,15 @@ def merge_language(existing, incoming):
         if lang and lang not in langs:
             langs.append(lang)
     merged["languages"] = langs
-
     if incoming.get("language") == "ja":
         merged["nameJa"] = incoming.get("name") or merged.get("nameJa", "")
     elif not merged.get("name"):
         merged["name"] = incoming.get("name", "")
-
-    # TCGdex CDN is our preferred image fallback. It fixes old/broken image links
-    # without changing the rich metadata from PokemonTCG/pokemon-tcg-data.
     if str(incoming.get("source", "")).startswith("TCGdex"):
         if incoming.get("image"):
             merged["image"] = incoming["image"]
         if incoming.get("imageLarge"):
             merged["imageLarge"] = incoming["imageLarge"]
-
     if not merged.get("set") or merged.get("set") == merged.get("setId"):
         if incoming.get("set"):
             merged["set"] = incoming["set"]
@@ -215,7 +269,6 @@ def merge_language(existing, incoming):
         merged["series"] = incoming["series"]
     if not merged.get("releaseDate") and incoming.get("releaseDate"):
         merged["releaseDate"] = incoming["releaseDate"]
-
     sources = []
     for src in str(merged.get("source", "")).split(" + ") + str(incoming.get("source", "")).split(" + "):
         if src and src not in sources:
@@ -231,12 +284,10 @@ def sorted_unique(values):
 def main():
     if not CARDS_DIR.exists() or not SETS_FILE.exists():
         raise SystemExit("Official Pokemon TCG dataset not found")
-
     sets = json.loads(SETS_FILE.read_text(encoding="utf-8"))
     sets_by_id = {s.get("id", ""): s for s in sets}
     store = {}
     official_count = 0
-
     for file in sorted(CARDS_DIR.glob("*.json")):
         try:
             raw_cards = json.loads(file.read_text(encoding="utf-8"))
@@ -248,13 +299,11 @@ def main():
             if card["id"] and card["name"]:
                 store[card["originalId"]] = card
                 official_count += 1
-
     coverage = {"officialEnglish": official_count}
     tcgdex_sets_en = fetch_tcgdex_sets("en")
     tcgdex_sets_ja = fetch_tcgdex_sets("ja")
     coverage["tcgdex_en_sets"] = len(tcgdex_sets_en)
     coverage["tcgdex_ja_sets"] = len(tcgdex_sets_ja)
-
     try:
         briefs_en = fetch_tcgdex("en")
         coverage["tcgdex_en"] = len(briefs_en)
@@ -272,7 +321,6 @@ def main():
         coverage["tcgdex_en_added"] = en_added
     except Exception as exc:
         print(f"TCGdex en unavailable: {exc}")
-
     try:
         briefs_ja = fetch_tcgdex("ja")
         coverage["tcgdex_ja"] = len(briefs_ja)
@@ -288,7 +336,7 @@ def main():
                 store[cid] = merge_language(store[cid], card)
                 ja_merged += 1
                 continue
-            if not card.get("image"):
+            if not card.get("image") and not card.get("imageLarge"):
                 ja_skipped_no_image += 1
                 continue
             store[cid] = card
@@ -298,19 +346,19 @@ def main():
         coverage["tcgdex_ja_skipped_no_image"] = ja_skipped_no_image
     except Exception as exc:
         print(f"TCGdex ja unavailable: {exc}")
-
     before_image_filter = len(store)
     store = {k: v for k, v in store.items() if v.get("image") or v.get("imageLarge")}
     coverage["removedWithoutImageFinal"] = before_image_filter - len(store)
-
     cards = list(store.values())
+    cards, repaired, removed = verify_risky_images(cards)
+    coverage["japaneseBrokenImagesRepaired"] = repaired
+    coverage["japaneseBrokenImagesRemoved"] = removed
     cards.sort(key=lambda c: (c["name"].casefold(), c.get("set", ""), c.get("number", ""), c.get("id", "")))
     coverage["mergedSearchableRecords"] = len(cards)
     coverage["japaneseOnlySearchable"] = sum(1 for c in cards if c.get("language") == "ja" and c.get("languages") == ["ja"])
     coverage["multilingualMerged"] = sum(1 for c in cards if "ja" in (c.get("languages") or []) and "en" in (c.get("languages") or []))
     coverage["deltaReignStormEmeraldaRecords"] = sum(1 for c in cards if "delta reign" in c.get("set", "").casefold() or "storm emeralda" in c.get("set", "").casefold() or c.get("setId", "").casefold() == "m6")
     coverage["celebration30Records"] = sum(1 for c in cards if "30th celebration" in c.get("set", "").casefold() or c.get("setId", "").casefold() in {"30c", "30th"})
-
     meta = {
         "languages": sorted_unique(lang for c in cards for lang in (c.get("languages") or [c.get("language", "")])),
         "supertypes": sorted_unique(c["supertype"] for c in cards),
@@ -320,8 +368,8 @@ def main():
         "sets": sorted_unique(c["set"] for c in cards),
     }
     payload = {
-        "source": "PokemonTCG English + TCGdex English/Japanese with current set metadata and CDN image repair",
-        "language": "en with ja metadata / ja-only when unique",
+        "source": "PokemonTCG English + TCGdex English/Japanese with verified Japanese imagery",
+        "language": "en with ja metadata / ja-only when unique and image-verified",
         "count": len(cards),
         "coverage": coverage,
         "meta": meta,
