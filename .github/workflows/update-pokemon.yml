@@ -9,6 +9,7 @@ on:
       - 'scripts/build_pokemon.py'
       - 'scripts/augment_pokemon_upcoming.py'
       - 'scripts/augment_multilingual_names.py'
+      - 'scripts/enrich_pokemon_descriptions.py'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -36,6 +37,9 @@ jobs:
           path: source/pokemon-tcg-data
           fetch-depth: 1
 
+      - name: Install Pokemon enrichment parser
+        run: python -m pip install --disable-pip-version-check beautifulsoup4
+
       - name: Build merged Pokemon database
         run: python scripts/build_pokemon.py
 
@@ -44,6 +48,9 @@ jobs:
 
       - name: Add Portuguese, English and Japanese names
         run: python scripts/augment_multilingual_names.py pokemon
+
+      - name: Add card effects, descriptions and remove duplicate printings
+        run: python scripts/enrich_pokemon_descriptions.py
 
       - name: Commit database when changed
         run: |
