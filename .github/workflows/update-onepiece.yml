@@ -20,23 +20,41 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - name: Checkout Sertao TCG database
         uses: actions/checkout@v4
-      - name: Checkout One Piece multilingual official-site dataset
+        with:
+          fetch-depth: 0
+
+      - name: Checkout One Piece multilingual fallback dataset
         uses: actions/checkout@v4
         with:
           repository: Kuroro1990/OPTCG
           path: source/optcg
           fetch-depth: 1
+
       - name: Checkout secondary English One Piece dataset
         uses: actions/checkout@v4
         with:
           repository: apitcg/one-piece-tcg-data
           path: source/apitcg
           fetch-depth: 1
+
+      - name: Install vegapull
+        run: cargo install vegapull --locked --version 1.3.0
+
+      - name: Fetch latest English cards directly from Bandai
+        run: |
+          python source/optcg/build_punk_records.py \
+            --vegapull "$(command -v vega)" \
+            --language english \
+            --out-dir source/live-optcg \
+            --clean
+
       - name: Build merged One Piece database
         run: python scripts/build_onepiece.py
+
       - name: Commit database when changed
         run: |
           git config user.name "sertao-tcg-bot"
