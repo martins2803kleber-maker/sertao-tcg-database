@@ -10,6 +10,7 @@ on:
       - 'scripts/augment_pokemon_upcoming.py'
       - 'scripts/augment_multilingual_names.py'
       - 'scripts/enrich_pokemon_descriptions.py'
+      - 'scripts/finalize_pokemon_latest_effects.py'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -51,6 +52,9 @@ jobs:
 
       - name: Add card effects, descriptions and remove duplicate printings
         run: python scripts/enrich_pokemon_descriptions.py
+
+      - name: Complete latest-set Trainer and English-number effect text
+        run: python scripts/finalize_pokemon_latest_effects.py
 
       - name: Commit database when changed
         run: |
