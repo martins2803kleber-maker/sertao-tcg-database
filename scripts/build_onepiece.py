@@ -4,6 +4,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 PRIMARY = ROOT / 'source' / 'optcg'
+LIVE = ROOT / 'source' / 'live-optcg' / 'english'
+LIVE_DATA = LIVE / 'data'
 SECONDARY = ROOT / 'source' / 'apitcg'
 SECONDARY_CARDS = SECONDARY / 'cards' / 'en'
 OUT_DIR = ROOT / 'data'
@@ -28,8 +30,8 @@ def to_int(v):
         return v
 
 
-def pack_titles(lang):
-    file = PRIMARY / lang / 'packs.json'
+def read_pack_titles(root, lang=None):
+    file = (root / lang / 'packs.json') if lang else (root / 'packs.json')
     out = {}
     if not file.exists():
         return out
@@ -49,7 +51,6 @@ def pack_titles(lang):
 
 
 def canonical_id(value):
-    """Language is metadata, never part of a physical printing's identity."""
     value = str(value or '').strip()
     value = re.sub(r'^(?:JP|JA|EN):', '', value, flags=re.I)
     return value
@@ -59,19 +60,19 @@ def base_id(value):
     return canonical_id(value).split('_', 1)[0].strip()
 
 
-def normalize_primary(raw, lang, titles):
+def normalize_vegapull(raw, language, titles, source_name):
     original_id = canonical_id(raw.get('id', ''))
     pack_id = str(raw.get('pack_id', '')).strip()
     image = raw.get('img_full_url') or raw.get('img_url') or ''
+    is_ja = language == 'ja'
     if image and image.startswith('/'):
-        image = ('https://www.onepiece-cardgame.com' if lang == 'japanese' else 'https://en.onepiece-cardgame.com') + image
-    is_ja = lang == 'japanese'
+        image = ('https://www.onepiece-cardgame.com' if is_ja else 'https://en.onepiece-cardgame.com') + image
     return {
         'id': original_id,
         'originalId': original_id,
         'baseId': base_id(original_id),
-        'language': 'ja' if is_ja else 'en',
-        'languages': ['ja' if is_ja else 'en'],
+        'language': language,
+        'languages': [language],
         'name': str(raw.get('name', '') or '').strip(),
         'nameJa': str(raw.get('name', '') or '').strip() if is_ja else '',
         'packId': pack_id,
@@ -91,7 +92,7 @@ def normalize_primary(raw, lang, titles):
         'triggerJa': str(raw.get('trigger', '') or '').strip() if is_ja else '',
         'image': str(image or '').strip(),
         'imageJa': str(image or '').strip() if is_ja else '',
-        'source': f'Kuroro1990/OPTCG {lang}',
+        'source': source_name,
     }
 
 
@@ -143,18 +144,14 @@ def quality(c):
 def merge_same_print(a, b):
     if not a:
         return b
-
     a_is_en = 'en' in (a.get('languages') or [a.get('language')])
     b_is_en = 'en' in (b.get('languages') or [b.get('language')])
-
-    # Prefer English as public display text whenever available; Japanese stays as metadata.
     if b_is_en and not a_is_en:
         primary, other = b, a
     elif a_is_en and not b_is_en:
         primary, other = a, b
     else:
         primary, other = (a, b) if quality(a) >= quality(b) else (b, a)
-
     m = dict(primary)
     langs = []
     for card in (a, b):
@@ -163,14 +160,12 @@ def merge_same_print(a, b):
                 langs.append(lang)
     m['languages'] = langs
     m['language'] = 'en' if 'en' in langs else 'ja'
-
     ja = a if 'ja' in (a.get('languages') or [a.get('language')]) else b if 'ja' in (b.get('languages') or [b.get('language')]) else None
     if ja:
         m['nameJa'] = ja.get('nameJa') or ja.get('name') or m.get('nameJa', '')
         m['effectJa'] = ja.get('effectJa') or ja.get('effect') or m.get('effectJa', '')
         m['triggerJa'] = ja.get('triggerJa') or ja.get('trigger') or m.get('triggerJa', '')
         m['imageJa'] = ja.get('imageJa') or ja.get('image') or m.get('imageJa', '')
-
     for k in ('name', 'packId', 'pack', 'packLabel', 'rarity', 'category', 'effect', 'trigger', 'image', 'baseId', 'originalId'):
         if not m.get(k) and other.get(k):
             m[k] = other[k]
@@ -183,7 +178,6 @@ def merge_same_print(a, b):
             if x not in vals:
                 vals.append(x)
         m[k] = vals
-
     src = []
     for card in (a, b):
         for s in str(card.get('source', '')).split(' + '):
@@ -214,35 +208,52 @@ def set_code(card):
     return f'{m.group(1).upper()}-{int(m.group(2)):02d}'
 
 
+def ingest_vegapull_dir(store, cards_dir, language, titles, source_name):
+    count = 0
+    merges = 0
+    if not cards_dir.exists():
+        return count, merges
+    for file in sorted(cards_dir.rglob('*.json')):
+        try:
+            parsed = json.loads(file.read_text(encoding='utf-8'))
+        except Exception as exc:
+            print(f'Skipping {file}: {exc}')
+            continue
+        rows = [parsed] if isinstance(parsed, dict) else parsed if isinstance(parsed, list) else []
+        for raw in rows:
+            if not isinstance(raw, dict):
+                continue
+            card = normalize_vegapull(raw, language, titles, source_name)
+            if card.get('id') and card.get('name'):
+                count += 1
+                if add(store, card):
+                    merges += 1
+    return count, merges
+
+
 def main():
     store = {}
     counts = {}
-    language_merges = 0
 
-    # English first so it becomes the preferred display layer.
-    for lang in ('english', 'japanese'):
+    # Fresh Bandai scrape first. This is the source that exposes brand-new OP/EB sets
+    # immediately instead of waiting for a mirror repository to update.
+    live_titles = read_pack_titles(LIVE)
+    live_count, live_merges = ingest_vegapull_dir(
+        store, LIVE_DATA, 'en', live_titles, 'Bandai official live via vegapull'
+    )
+    counts['liveBandaiEnglish'] = live_count
+    counts['liveBandaiDuplicatesMerged'] = live_merges
+
+    language_merges = 0
+    for lang, code in (('english', 'en'), ('japanese', 'ja')):
         cards_dir = PRIMARY / lang / 'cards'
-        titles = pack_titles(lang)
-        n = 0
-        if not cards_dir.exists():
-            print(f'Missing {cards_dir}')
-            continue
-        for file in sorted(cards_dir.rglob('*.json')):
-            try:
-                parsed = json.loads(file.read_text(encoding='utf-8'))
-            except Exception as exc:
-                print(f'Skipping {file}: {exc}')
-                continue
-            rows = [parsed] if isinstance(parsed, dict) else parsed if isinstance(parsed, list) else []
-            for raw in rows:
-                if not isinstance(raw, dict):
-                    continue
-                card = normalize_primary(raw, lang, titles)
-                if card.get('id') and card.get('name'):
-                    n += 1
-                    if add(store, card) and lang == 'japanese':
-                        language_merges += 1
+        titles = read_pack_titles(PRIMARY, lang)
+        n, merges = ingest_vegapull_dir(
+            store, cards_dir, code, titles, f'Kuroro1990/OPTCG {lang}'
+        )
         counts[lang] = n
+        if lang == 'japanese':
+            language_merges += merges
 
     sec = 0
     if SECONDARY_CARDS.exists():
@@ -266,17 +277,18 @@ def main():
     cards = list(store.values())
     cards.sort(key=lambda c: (c['name'].casefold(), c.get('baseId', ''), c.get('id', '')))
 
-    # Coverage diagnostics specifically guard the newest Japanese sets.
     by_set = {}
     for c in cards:
         sc = set_code(c)
         if sc:
             by_set[sc] = by_set.get(sc, 0) + 1
     counts['setCoverage'] = dict(sorted(by_set.items()))
-    counts['OP14Records'] = by_set.get('OP-14', 0)
-    counts['OP15Records'] = by_set.get('OP-15', 0)
+    for code in ('OP-14', 'OP-15', 'OP-16', 'OP-17', 'EB-01', 'EB-02', 'EB-03', 'EB-04'):
+        counts[f'{code.replace("-", "")}Records'] = by_set.get(code, 0)
     op_numbers = [int(code.split('-')[1]) for code in by_set if code.startswith('OP-')]
+    eb_numbers = [int(code.split('-')[1]) for code in by_set if code.startswith('EB-')]
     counts['highestOPSetDetected'] = max(op_numbers) if op_numbers else None
+    counts['highestEBSetDetected'] = max(eb_numbers) if eb_numbers else None
     counts['japaneseOnlyUnique'] = sum(1 for c in cards if (c.get('languages') or []) == ['ja'])
     counts['multilingualMerged'] = sum(1 for c in cards if 'ja' in (c.get('languages') or []) and 'en' in (c.get('languages') or []))
     counts['mergedSearchableRecords'] = len(cards)
@@ -294,7 +306,7 @@ def main():
         'packs': uniq(c['pack'] for c in cards),
     }
     payload = {
-        'source': 'Kuroro1990/OPTCG English+Japanese + apitcg English (language-deduplicated)',
+        'source': 'Bandai live via vegapull + Kuroro1990/OPTCG EN/JP + apitcg EN (deduplicated)',
         'language': 'en preferred, ja metadata / ja-only unique printings',
         'count': len(cards),
         'coverage': counts,
