@@ -1,5 +1,4 @@
 import json
-import shutil
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -50,8 +49,6 @@ def main():
             card = normalize_card(raw, sets_by_id)
             if not card["name"]:
                 continue
-            # Keep cards even if an image is temporarily unavailable; the frontend
-            # can fall back from image to imageLarge or to a neutral placeholder.
             cards.append(card)
 
     cards.sort(key=lambda c: (c["name"].casefold(), c["releaseDate"], c["set"], c["number"]))
