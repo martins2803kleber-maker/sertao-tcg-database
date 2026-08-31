@@ -1,0 +1,38 @@
+name: Atualizar banco Pokemon
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 6 * * *'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Sertao TCG database
+        uses: actions/checkout@v4
+
+      - name: Checkout official Pokemon TCG data
+        uses: actions/checkout@v4
+        with:
+          repository: PokemonTCG/pokemon-tcg-data
+          path: source/pokemon-tcg-data
+          fetch-depth: 1
+
+      - name: Build lightweight database
+        run: python scripts/build_pokemon.py
+
+      - name: Commit database when changed
+        run: |
+          git config user.name "sertao-tcg-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add data/pokemon.json
+          if git diff --cached --quiet; then
+            echo "Banco ja esta atualizado."
+          else
+            git commit -m "Atualiza banco Pokemon"
+            git push
+          fi
