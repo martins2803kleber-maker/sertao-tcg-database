@@ -11,6 +11,7 @@ on:
       - 'scripts/augment_multilingual_names.py'
       - 'scripts/enrich_pokemon_descriptions.py'
       - 'scripts/finalize_pokemon_latest_effects.py'
+      - 'scripts/filter_broken_pokemon_images.py'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
@@ -55,6 +56,9 @@ jobs:
 
       - name: Complete latest-set Trainer and English-number effect text
         run: python scripts/finalize_pokemon_latest_effects.py
+
+      - name: Audit and remove remaining broken Pokemon images
+        run: python scripts/filter_broken_pokemon_images.py
 
       - name: Commit database when changed
         run: |
