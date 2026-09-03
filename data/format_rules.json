@@ -1,9 +1,10 @@
 {
   "updatedAt": "2026-09-03",
   "sources": {
-    "yugiohTcgBanlist": "https://www.yugioh-card.com/en/limited/list_2026-05-18/",
+    "yugiohTcgBanlist": "https://www.db.yugioh-card.com/yugiohdb/forbidden_limited.action?request_locale=en",
     "yugiohGenesys": "https://www.yugioh-card.com/en/genesys/",
     "pokemonStandard2026": "https://www.pokemon.com/br/noticias/anuncio-da-rotacao-do-formato-padrao-do-pokemon-estampas-ilustradas-2026",
+    "pokemonCompetitiveRules": "https://play.pokemon.com/pt-br/resources/rules/",
     "pokemonGlcRules": "https://gymleaderchallenge.com/rules",
     "pokemonGlcBanlist": "https://gymleaderchallenge.com/ban-list",
     "onepieceConstruction": "https://en.onepiece-cardgame.com/pdf/championship2024_rules.pdf"
@@ -11,6 +12,7 @@
   "yugioh": {
     "standardBanlistEffective": "2026-05-18",
     "standardCategories": ["meta", "rogue", "meme"],
+    "keepRestrictedCardsVisibleInBuilder": true,
     "genesys": {
       "usesStandardBanlist": false,
       "pointCap": 100,
@@ -25,7 +27,10 @@
     "standard": {
       "legalRegulationMarks": ["H", "I", "J"],
       "allowFutureMarks": true,
-      "effectiveInPerson": "2026-04-10"
+      "effectiveInPerson": "2026-04-10",
+      "waitingPeriodDays": 14,
+      "requireReleasedCard": true,
+      "allowOlderPrintIfSameNameHasCurrentLegalPrint": true
     },
     "expanded": {
       "sitePolicy": "all_cards_allowed"
