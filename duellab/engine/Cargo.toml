@@ -1,0 +1,13 @@
+[package]
+name = "duellab-engine"
+version = "0.1.0"
+edition = "2024"
+license = "AGPL-3.0-only"
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+wasm-bindgen = "0.2.122"
+js-sys = "0.3.99"
+ocgcore-ffi = { version = "0.1.4", features = ["bundled"] }
