@@ -12,6 +12,7 @@ on:
       - 'scripts/enrich_pokemon_descriptions.py'
       - 'scripts/finalize_pokemon_latest_effects.py'
       - 'scripts/filter_broken_pokemon_images.py'
+      - 'data/format_rules.json'
       - '.github/workflows/update-pokemon.yml'
   schedule:
     - cron: '17 */6 * * *'
