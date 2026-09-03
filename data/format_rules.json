@@ -1,0 +1,68 @@
+{
+  "updatedAt": "2026-09-03",
+  "sources": {
+    "yugiohTcgBanlist": "https://www.yugioh-card.com/en/limited/list_2026-05-18/",
+    "yugiohGenesys": "https://www.yugioh-card.com/en/genesys/",
+    "pokemonStandard2026": "https://www.pokemon.com/br/noticias/anuncio-da-rotacao-do-formato-padrao-do-pokemon-estampas-ilustradas-2026",
+    "pokemonGlcRules": "https://gymleaderchallenge.com/rules",
+    "pokemonGlcBanlist": "https://gymleaderchallenge.com/ban-list",
+    "onepieceConstruction": "https://en.onepiece-cardgame.com/pdf/championship2024_rules.pdf"
+  },
+  "yugioh": {
+    "standardBanlistEffective": "2026-05-18",
+    "standardCategories": ["meta", "rogue", "meme"],
+    "genesys": {
+      "usesStandardBanlist": false,
+      "pointCap": 100,
+      "maxCopies": 3,
+      "forbidLink": true,
+      "forbidPendulum": true,
+      "pointsSource": "https://raw.githubusercontent.com/KillerxG/CCG-Brasil-Banlists/ce6d8d52ec5f3802305ab5f1769ccaecb5bd45ea/official_genesys.conf"
+    }
+  },
+  "pokemon": {
+    "deckSize": 60,
+    "standard": {
+      "legalRegulationMarks": ["H", "I", "J"],
+      "allowFutureMarks": true,
+      "effectiveInPerson": "2026-04-10"
+    },
+    "expanded": {
+      "sitePolicy": "all_cards_allowed"
+    },
+    "glc": {
+      "singleton": true,
+      "basicEnergyException": true,
+      "onePokemonType": true,
+      "forbidRuleBox": true,
+      "forbidAceSpec": true,
+      "blackWhiteOnward": true,
+      "bannedNames": [
+        "Lysandre's Trump Card",
+        "Oranguru",
+        "Forest of Giant Plants",
+        "Chip-Chip Ice Axe",
+        "Hiker",
+        "Kyogre",
+        "Pokemon Research Lab",
+        "Pokémon Research Lab",
+        "Raikou",
+        "Marshadow",
+        "Duskull",
+        "Double Colorless Energy",
+        "Twin Energy",
+        "Dimension Valley"
+      ]
+    }
+  },
+  "onepiece": {
+    "leaderCount": 1,
+    "mainDeckSize": 50,
+    "maxCopies": 4,
+    "enforceLeaderColors": true,
+    "categories": {
+      "standard": {"siteBanlist": []},
+      "all blue": {"siteBanlist": []}
+    }
+  }
+}
