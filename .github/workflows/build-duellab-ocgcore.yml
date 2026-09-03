@@ -1,0 +1,88 @@
+name: Build Duel Lab OCGCore WebAssembly
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'duellab/engine/**'
+      - '.github/workflows/build-duellab-ocgcore.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+
+      - name: Install wasm-bindgen CLI
+        run: cargo install wasm-bindgen-cli --version 0.2.122 --locked
+
+      - name: Install Emscripten 6.0.0
+        shell: bash
+        run: |
+          git clone --depth 1 https://github.com/emscripten-core/emsdk.git "$HOME/emsdk"
+          cd "$HOME/emsdk"
+          ./emsdk install 6.0.0
+          ./emsdk activate 6.0.0
+
+      - name: Build Rust + OCGCore
+        shell: bash
+        run: |
+          source "$HOME/emsdk/emsdk_env.sh"
+          export EMSDK="$HOME/emsdk"
+          cargo build --manifest-path duellab/engine/Cargo.toml --release --target wasm32-unknown-unknown
+
+      - name: Generate browser bindings
+        shell: bash
+        run: |
+          rm -rf assets/duellab/engine
+          mkdir -p assets/duellab/engine
+          wasm-bindgen \
+            --target web \
+            --out-dir assets/duellab/engine \
+            --out-name duellab_engine \
+            target/wasm32-unknown-unknown/release/duellab_engine.wasm
+
+          CORE_JS="$(find "$HOME/.cargo/registry/src" -path '*/ocgcore-ffi-0.1.4/ocgcore.js' -print -quit)"
+          if [ -z "$CORE_JS" ]; then
+            echo 'ocgcore.js was not generated' >&2
+            exit 1
+          fi
+          cp "$CORE_JS" assets/duellab/engine/ocgcore.js
+
+          # ocgcore-ffi imports /ocgcore.js. Blogger cannot host that at its root,
+          # so point the generated module to this repository's CDN asset instead.
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('assets/duellab/engine/duellab_engine.js')
+          s = p.read_text(encoding='utf-8')
+          cdn = 'https://cdn.jsdelivr.net/gh/martins2803kleber-maker/sertao-tcg-database@main/assets/duellab/engine/ocgcore.js'
+          s = s.replace("'/ocgcore.js'", repr(cdn)).replace('"/ocgcore.js"', repr(cdn))
+          p.write_text(s, encoding='utf-8')
+          PY
+
+          cat > assets/duellab/engine/build.json <<EOF
+          {"engine":"ocgcore","bridge":"0.1.0","generatedBy":"GitHub Actions"}
+          EOF
+
+      - name: Commit generated browser engine
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add assets/duellab/engine
+          if git diff --cached --quiet; then
+            echo 'No generated changes.'
+            exit 0
+          fi
+          git commit -m 'duellab: build ocgcore browser engine'
+          git push
