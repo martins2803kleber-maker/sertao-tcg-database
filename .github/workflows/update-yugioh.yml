@@ -6,6 +6,7 @@ on:
     paths:
       - 'scripts/build_yugioh.py'
       - 'scripts/augment_multilingual_names.py'
+      - 'data/format_rules.json'
       - '.github/workflows/update-yugioh.yml'
   workflow_dispatch:
   schedule:
