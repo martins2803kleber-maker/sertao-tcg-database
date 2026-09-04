@@ -16,15 +16,14 @@
 
     source=source.replace("for(var d=0;d<n&&o2+4<=pkt.length;d++){codes.push(u32(dv,o2));o2+=4}","for(var d=0;d<n&&o2+8<=pkt.length;d++){codes.push(u32(dv,o2));o2+=8}");
 
-    source=source.replace("var slot=(seq!=null&&seq>=0&&seq<5)?seq:pool.findIndex(function(x){return !x});","var zoneLimit=loc===4?7:8;var slot=(seq!=null&&seq>=0&&seq<zoneLimit)?seq:pool.findIndex(function(x){return !x});");
-
+    /* Keep the visual field arrays at the original five zones. Extra Monster
+       Zones and Field/Pendulum zones are rendered by their own DOM elements;
+       expanding these arrays changes the CSS grid and duplicates zones. */
     source=source.replace("'proc_workaround.lua'\n];","'proc_workaround.lua','proc_persistent.lua','proc_rush.lua','proc_skill.lua'\n];");
 
-    source=source.replace(`function setupMirrorFromDecks(player,bot){\n  state.playerLP=8000;state.botLP=8000;state.playerField=Array(5).fill(null);state.botField=Array(5).fill(null);\n  state.playerHand=[];state.botHand=[];state.playerDeck=player.main.map(cardByCode);state.botDeck=(bot.main||[]).map(cardByCode);state.playerSpellField=Array(5).fill(null);state.botSpellField=Array(5).fill(null);`,`function shuffleMirrorArray(a){\n  if(!a||a.length<2)return a;\n  var rnd=new Uint32Array(a.length);try{crypto.getRandomValues(rnd)}catch(e){for(var q=0;q<rnd.length;q++)rnd[q]=(Math.random()*0xffffffff)>>>0}\n  for(var i=a.length-1;i>0;i--){var j=rnd[i]%(i+1),t=a[i];a[i]=a[j];a[j]=t}\n  return a;\n}\nfunction setupMirrorFromDecks(player,bot){\n  state.playerLP=8000;state.botLP=8000;state.playerField=Array(7).fill(null);state.botField=Array(7).fill(null);\n  state.playerHand=[];state.botHand=[];state.playerDeck=shuffleMirrorArray(player.main.map(cardByCode));state.botDeck=shuffleMirrorArray((bot.main||[]).map(cardByCode));state.playerSpellField=Array(8).fill(null);state.botSpellField=Array(8).fill(null);`);
+    source=source.replace(`function setupMirrorFromDecks(player,bot){\n  state.playerLP=8000;state.botLP=8000;state.playerField=Array(5).fill(null);state.botField=Array(5).fill(null);\n  state.playerHand=[];state.botHand=[];state.playerDeck=player.main.map(cardByCode);state.botDeck=(bot.main||[]).map(cardByCode);state.playerSpellField=Array(5).fill(null);state.botSpellField=Array(5).fill(null);`,`function shuffleMirrorArray(a){\n  if(!a||a.length<2)return a;\n  var rnd=new Uint32Array(a.length);try{crypto.getRandomValues(rnd)}catch(e){for(var q=0;q<rnd.length;q++)rnd[q]=(Math.random()*0xffffffff)>>>0}\n  for(var i=a.length-1;i>0;i--){var j=rnd[i]%(i+1),t=a[i];a[i]=a[j];a[j]=t}\n  return a;\n}\nfunction setupMirrorFromDecks(player,bot){\n  state.playerLP=8000;state.botLP=8000;state.playerField=Array(5).fill(null);state.botField=Array(5).fill(null);\n  state.playerHand=[];state.botHand=[];state.playerDeck=shuffleMirrorArray(player.main.map(cardByCode));state.botDeck=shuffleMirrorArray((bot.main||[]).map(cardByCode));state.playerSpellField=Array(5).fill(null);state.botSpellField=Array(5).fill(null);`);
 
-    /* OCGCore moderno, exatamente conforme o parser não-compat do EDOPro:
-       contagens arbitrarias=u32; sequence=u32, exceto reposicao=u8;
-       activatable desc=u64 + client mode=u8. */
+    /* OCGCore moderno conforme o parser non-compat do EDOPro. */
     source=source.replace(/function parseIdle\(pkt\)\{[\s\S]*?\n\}\nfunction parseBattle\(pkt\)\{/,`function parseIdle(pkt){
   var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
   var player=dv.getUint8(o++);
