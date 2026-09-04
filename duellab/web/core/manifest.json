@@ -1,0 +1,15 @@
+{
+  "source": "ProjectIgnis/BabelCDB",
+  "upstream": "8385e3d4395b73368cf2318255724071eb8c73e9",
+  "cardCount": 20778,
+  "databases": [
+    "cards.cdb",
+    "cards-unofficial.cdb",
+    "prerelease-betb-en.cdb",
+    "prerelease-betb.cdb",
+    "prerelease-dbgv.cdb",
+    "prerelease-imph.cdb",
+    "prerelease-others.cdb",
+    "prerelease-yac1.cdb"
+  ]
+}
