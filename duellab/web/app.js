@@ -170,6 +170,21 @@ function render(){`);
     source=source.replace("while(real.active&&safety++<240)","while(real.active&&safety++<800)");
     source=source.replace("if(safety>=240)throw Error('Safety stop: core avançou demais sem solicitar decisão.');","if(safety>=800)throw Error('Safety stop: core avançou demais sem solicitar decisão.');");
 
+    /* HOTFIX OCGCORE CARD IDENTITY */
+    source=source.replace(/function sameRef\(a,b\)\{[\s\S]*?\n\}/,`function sameRef(a,b){
+  if(!a||!b)return false;
+  var al=a.location!=null?Number(a.location):null,bl=b.location!=null?Number(b.location):null;
+  var ac=a.controller!=null?Number(a.controller):null,bc=b.controller!=null?Number(b.controller):null;
+  var as=a.sequence!=null?Number(a.sequence):null,bs=b.sequence!=null?Number(b.sequence):null;
+  if(ac!=null&&bc!=null&&ac!==bc)return false;
+  if(al!=null&&bl!=null&&al!==bl)return false;
+  if(al!=null&&bl!=null&&as!=null&&bs!=null)return as===bs;
+  var ca=Number(a.code||0),cb=Number(b.code||0);
+  return !!ca&&!!cb&&ca===cb;
+}`);
+
+    source=source.replace("if(p.msg===11)duelHint.textContent='MAIN PHASE - right-click a card to Summon, Set or Activate.';",`if(p.msg===11){duelHint.textContent='MAIN PHASE - right-click a card to Summon, Set or Activate.';console.debug('Duel Lab legal idle',p)}`);
+
     const style=document.createElement('style');
     style.textContent='#playerExtraPile.legal-active{outline:2px solid #4fd8ff;box-shadow:0 0 18px rgba(79,216,255,.55)}';
     document.head.appendChild(style);
