@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # Builds the browser-optimized mirrors used by search, filters, decklists and Deck Builder.
+# Pokemon metadata compatibility hotfix: 2026-09-04.
 from __future__ import annotations
 import hashlib, json, re, shutil
 from pathlib import Path
