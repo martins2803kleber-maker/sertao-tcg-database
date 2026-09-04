@@ -185,6 +185,11 @@ function render(){`);
 
     source=source.replace("if(p.msg===11)duelHint.textContent='MAIN PHASE - right-click a card to Summon, Set or Activate.';",`if(p.msg===11){duelHint.textContent='MAIN PHASE - right-click a card to Summon, Set or Activate.';console.debug('Duel Lab legal idle',p)}`);
 
+    /* LOCAL PROJECT IGNIS CORE DB V2 */
+    source=source.replace("fetch(REAL_BASE+'core/cards_core.json'+bust,{cache:'force-cache'})", "fetch('./core/cards_core.json',{cache:'no-cache'}).then(function(localResponse){if(localResponse.ok)return localResponse;return fetch(REAL_BASE+'core/cards_core.json'+bust,{cache:'force-cache'})})");
+    source=source.replace("if(rec.length<Math.min(20,new Set(ids).size))throw Error('Dados do core incompletos para este deck.');", `var uniqueCoreIds=Array.from(new Set(ids.map(Number))).filter(Boolean);\n    var coreHave=new Set(rec.map(function(c){return Number(c.id)}));\n    var missingCoreIds=uniqueCoreIds.filter(function(id){return !coreHave.has(id)});\n    if(missingCoreIds.length)throw Error('Banco OCGCore sem dados para '+missingCoreIds.length+' carta(s): '+missingCoreIds.slice(0,20).join(', '));\n    log('<b>Core DB:</b> '+rec.length+' cartas do duelo validadas.');`);
+    source=source.replace("real.ready=true;", "real.ready=true;console.info('Duel Lab Core DB carregado:',real.coreCards.length,'cartas');");
+
     const style=document.createElement('style');
     style.textContent='#playerExtraPile.legal-active{outline:2px solid #4fd8ff;box-shadow:0 0 18px rgba(79,216,255,.55)}';
     document.head.appendChild(style);
