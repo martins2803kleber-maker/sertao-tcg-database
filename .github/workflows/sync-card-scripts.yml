@@ -1,4 +1,4 @@
-name: Sync Duel Lab CardScripts
+name: Sync Duel Lab Project Ignis Data
 
 on:
   workflow_dispatch:
@@ -9,12 +9,13 @@ on:
     paths:
       - '.github/workflows/sync-card-scripts.yml'
       - 'scripts/build-card-bundles.mjs'
+      - 'scripts/build-duellab-core.py'
 
 permissions:
   contents: write
 
 concurrency:
-  group: duellab-cardscripts-sync
+  group: duellab-project-ignis-sync
   cancel-in-progress: true
 
 jobs:
@@ -25,18 +26,39 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 1
+
       - name: Clone Project Ignis CardScripts
         run: git clone --depth 1 https://github.com/ProjectIgnis/CardScripts.git /tmp/cardscripts
+
+      - name: Clone Project Ignis BabelCDB
+        run: git clone --depth 1 https://github.com/ProjectIgnis/BabelCDB.git /tmp/babelcdb
+
       - name: Build local script bundles
         run: node scripts/build-card-bundles.mjs /tmp/cardscripts duellab/web/cardscripts
-      - name: Commit bundles when changed
+
+      - name: Build complete OCGCore card database
+        run: python scripts/build-duellab-core.py /tmp/babelcdb
+
+      - name: Validate generated data
+        run: |
+          python - <<'PY'
+          import json
+          scripts=json.load(open('duellab/web/cardscripts/manifest.json',encoding='utf-8'))
+          cards=json.load(open('duellab/web/core/cards_core.json',encoding='utf-8'))
+          assert scripts['cardFiles'] > 20000, scripts
+          assert len(cards) > 10000, len(cards)
+          assert len({int(x['id']) for x in cards}) == len(cards)
+          print('CardScripts:',scripts['cardFiles'],'Core cards:',len(cards))
+          PY
+
+      - name: Commit Project Ignis data when changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add duellab/web/cardscripts
+          git add duellab/web/cardscripts duellab/web/core assets/duellab/core/cards_core.json
           if git diff --cached --quiet; then
-            echo "CardScripts already up to date"
+            echo "Project Ignis data already up to date"
             exit 0
           fi
-          git commit -m "Atualiza CardScripts locais do Duel Lab"
+          git commit -m "Atualiza CardScripts e banco OCGCore do Project Ignis"
           git push
