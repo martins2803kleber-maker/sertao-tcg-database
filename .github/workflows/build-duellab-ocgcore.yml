@@ -17,6 +17,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -78,7 +80,7 @@ jobs:
           PY
 
           cat > assets/duellab/engine/build.json <<EOF
-          {"engine":"ocgcore","bridge":"0.2.0","generatedBy":"GitHub Actions"}
+          {"engine":"ocgcore","bridge":"0.3.0","generatedBy":"GitHub Actions"}
           EOF
 
       - name: Commit generated browser engine
@@ -86,11 +88,17 @@ jobs:
         run: |
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+          # Keep generated files safe while synchronizing with commits made by other workflows.
+          git add -A assets/duellab/engine
+          git stash push --include-untracked -m duellab-generated || true
           git pull --rebase origin main
-          git add assets/duellab/engine
+          git stash pop || true
+
+          git add -A assets/duellab/engine
           if git diff --cached --quiet; then
             echo 'No generated changes.'
             exit 0
           fi
-          git commit -m 'duellab: build ocgcore browser engine'
-          git push
+          git commit -m 'duellab: build ocgcore browser engine 0.3.0'
+          git push origin main
