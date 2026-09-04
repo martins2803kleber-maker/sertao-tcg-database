@@ -55,6 +55,18 @@ def compact_card(game: str, card: dict) -> dict:
         if out.get('code') and not out.get('id'): out['id'] = out['code']
     elif game == 'pokemon':
         if out.get('name') and not out.get('nameEn'): out['nameEn'] = out['name']
+        s = out.get('set') if isinstance(out.get('set'), dict) else card.get('set')
+        if isinstance(s, dict):
+            if not out.get('releaseDate'):
+                release = s.get('releaseDate') or s.get('release_date')
+                if release: out['releaseDate'] = release
+            if not out.get('series') and s.get('series'):
+                out['series'] = s.get('series')
+            if not out.get('setCode'):
+                code = s.get('ptcgoCode') or s.get('id')
+                if code: out['setCode'] = code
+        if not out.get('legalities') and isinstance(card.get('legality'), dict):
+            out['legalities'] = card['legality']
     return out
 
 def cards_from(payload):
