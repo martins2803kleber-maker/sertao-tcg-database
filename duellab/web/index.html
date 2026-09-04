@@ -3,147 +3,50 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Duel Lab — SertãoTCG | EDOPro Web</title>
+<meta name="theme-color" content="#070b0d">
+<title>Duel Lab — SertãoTCG | OCGCore Web</title>
 <link rel="stylesheet" href="./styles.css">
+<link rel="stylesheet" href="./edopro-theme.css">
 </head>
 <body>
 <div class="stdl-app">
   <header class="stdl-top">
     <div class="stdl-brand">DUEL <span>LAB</span> <small style="color:#8799a4;font-size:8px">by SertãoTCG</small></div>
-    <div class="stdl-badge">EDOPRO WEB / OCGCORE</div>
-    <div class="stdl-status" id="engineStatus">Inicializando...</div>
-    <button class="stdl-fullscreen-btn" id="fullscreenBtn" type="button" title="Tela cheia">
-      <span class="stdl-fullscreen-icon">[ ]</span>
-      <span class="stdl-fullscreen-text">TELA CHEIA</span>
-    </button>
+    <div class="stdl-badge">OCGCORE / PROJECT IGNIS</div>
+    <div class="stdl-status" id="engineStatus">Inicializando motor...</div>
+    <button class="stdl-fullscreen-btn" id="fullscreenBtn" type="button" title="Tela cheia"><span class="stdl-fullscreen-icon">[ ]</span><span class="stdl-fullscreen-text">TELA CHEIA</span></button>
   </header>
   <div class="stdl-layout">
     <main class="stdl-main">
       <div class="stdl-arena">
-        <div class="stdl-opponent">
-          <div class="stdl-avatar">B</div>
-          <div class="stdl-meta"><strong>BOT SERTÃO</strong><small>Deck da Casa</small></div>
-          <div class="stdl-lp"><span id="botLP">8000</span> LP</div>
-        </div>
-
+        <div class="stdl-opponent"><div class="stdl-avatar">B</div><div class="stdl-meta"><strong>BOT SERTÃO</strong><small>OCGCore opponent</small></div><div class="stdl-lp"><span id="botLP">8000</span> LP</div></div>
         <section class="stdl-field">
-          <div class="stdl-board-line">
-            <div class="stdl-pile bot-pile" id="botExtraPile"><b>EXTRA</b><span id="botExtraCount">0</span></div>
-            <div class="stdl-row" id="botSpell"></div>
-            <div class="stdl-pile bot-pile" id="botDeckPile"><b>DECK</b><span id="botDeckCount">0</span></div>
-          </div>
-          <div class="stdl-board-line">
-            <div class="stdl-pile bot-pile" id="botBanishedPile"><b>BAN</b><span>0</span></div>
-            <div class="stdl-row" id="botMonsters"></div>
-            <div class="stdl-pile bot-pile" id="botGyPile"><b>GY</b><span id="botGyCount">0</span></div>
-          </div>
-          <div class="stdl-phasebar" id="phaseBar">
-            <button data-phase="DP">DP</button><button data-phase="SP">SP</button>
-            <button data-phase="M1" class="active">M1</button><button data-phase="BP">BP</button>
-            <button data-phase="M2">M2</button><button data-phase="EP">EP</button>
-          </div>
-          <div class="stdl-board-line">
-            <div class="stdl-pile player-pile" id="playerGyPile"><b>GY</b><span id="playerGyCount">0</span></div>
-            <div class="stdl-row" id="playerMonsters"></div>
-            <div class="stdl-pile player-pile" id="playerBanishedPile"><b>BAN</b><span>0</span></div>
-          </div>
-          <div class="stdl-board-line">
-            <div class="stdl-pile player-pile" id="playerDeckPile"><b>DECK</b><span id="playerDeckCount">0</span></div>
-            <div class="stdl-row" id="playerSpell"></div>
-            <div class="stdl-pile player-pile" id="playerExtraPile"><b>EXTRA</b><span id="playerExtraCount">0</span></div>
-          </div>
+          <div class="stdl-board-line"><div class="stdl-pile bot-pile" id="botExtraPile"><b>EXTRA</b><span id="botExtraCount">0</span></div><div class="stdl-row" id="botSpell"></div><div class="stdl-pile bot-pile" id="botDeckPile"><b>DECK</b><span id="botDeckCount">0</span></div></div>
+          <div class="stdl-board-line"><div class="stdl-pile bot-pile" id="botBanishedPile"><b>BAN</b><span>0</span></div><div class="stdl-row" id="botMonsters"></div><div class="stdl-pile bot-pile" id="botGyPile"><b>GY</b><span id="botGyCount">0</span></div></div>
+          <div class="stdl-phasebar" id="phaseBar"><button data-phase="DP">DP</button><button data-phase="SP">SP</button><button data-phase="M1" class="active">M1</button><button data-phase="BP">BP</button><button data-phase="M2">M2</button><button data-phase="EP">EP</button></div>
+          <div class="stdl-board-line"><div class="stdl-pile player-pile" id="playerGyPile"><b>GY</b><span id="playerGyCount">0</span></div><div class="stdl-row" id="playerMonsters"></div><div class="stdl-pile player-pile" id="playerBanishedPile"><b>BAN</b><span>0</span></div></div>
+          <div class="stdl-board-line"><div class="stdl-pile player-pile" id="playerDeckPile"><b>DECK</b><span id="playerDeckCount">0</span></div><div class="stdl-row" id="playerSpell"></div><div class="stdl-pile player-pile" id="playerExtraPile"><b>EXTRA</b><span id="playerExtraCount">0</span></div></div>
         </section>
-
-        <div class="stdl-hand-wrap">
-          <div class="stdl-hand-label">SUA MÃO</div>
-          <div class="stdl-hand" id="playerHand"></div>
-        </div>
-
-        <div class="stdl-player">
-          <div class="stdl-avatar">S</div>
-          <div class="stdl-meta"><strong>VOCÊ</strong><small id="deckLabel">Deck de teste</small></div>
-          <div class="stdl-lp"><span id="playerLP">8000</span> LP</div>
-        </div>
-
-        <aside class="stdl-card-preview" id="cardPreview">
-          <div class="stdl-card-preview-empty">
-            <strong>CARD DETAILS</strong>
-            <span>Hover a card to view its image, stats and effect text.</span>
-          </div>
-          <div class="stdl-card-preview-content" hidden>
-            <div class="stdl-card-preview-image-wrap">
-              <img class="stdl-card-preview-image" alt="">
-            </div>
-            <div class="stdl-card-preview-info">
-              <span class="stdl-card-preview-type"></span>
-              <h3 class="stdl-card-preview-name"></h3>
-              <div class="stdl-card-preview-stats"></div>
-              <div class="stdl-card-preview-effect"></div>
-            </div>
-          </div>
-        </aside>
-        <div class="stdl-duel-hintbar">
-          <span id="duelHint">Clique com o botão direito em uma carta para ver as ações disponíveis.</span>
-          <button id="passChainBtn" type="button" hidden>NAO ATIVAR / PASSAR</button>
-        </div>
+        <div class="stdl-hand-wrap"><div class="stdl-hand-label">SUA MÃO</div><div class="stdl-hand" id="playerHand"></div></div>
+        <div class="stdl-player"><div class="stdl-avatar">S</div><div class="stdl-meta"><strong>VOCÊ</strong><small id="deckLabel">Deck carregado</small></div><div class="stdl-lp"><span id="playerLP">8000</span> LP</div></div>
+        <aside class="stdl-card-preview" id="cardPreview"><div class="stdl-card-preview-empty"><strong>CARD DETAILS</strong><span>Passe o mouse em uma carta para ver imagem, atributos e efeito.</span></div><div class="stdl-card-preview-content" hidden><div class="stdl-card-preview-image-wrap"><img class="stdl-card-preview-image" alt=""></div><div class="stdl-card-preview-info"><span class="stdl-card-preview-type"></span><h3 class="stdl-card-preview-name"></h3><div class="stdl-card-preview-stats"></div><div class="stdl-card-preview-effect"></div></div></div></aside>
+        <div class="stdl-duel-hintbar"><span id="duelHint">Botão direito nas cartas mostra as ações legais retornadas pelo motor.</span><button id="passChainBtn" type="button" hidden>NÃO ATIVAR / PASSAR</button></div>
       </div>
     </main>
-
     <aside class="stdl-side">
-      <button class="stdl-tools-toggle" id="toolsToggle" type="button">
-        <span>OPÇÕES DO DUEL LAB</span>
-        <span id="toolsToggleIcon">+</span>
-      </button>
-
+      <button class="stdl-tools-toggle" id="toolsToggle" type="button"><span>PAINEL DO DUELO</span><span id="toolsToggleIcon">+</span></button>
       <div class="stdl-tools" id="duelTools">
-        <div class="stdl-box">
-          <h3>Duel Lab</h3>
-          <p>Duel Lab com OCGCore real e scripts Project Ignis carregados sob demanda. Interface inspirada no fluxo do EDOPro para navegador.</p>
-          <div class="stdl-engine">
-            <span class="stdl-pill" id="realPill">OCGCORE: carregando</span>
-            <span class="stdl-pill" id="dbPill">BANCO: carregando</span>
-          </div>
-        </div>
-
-        <div class="stdl-box">
-          <label>BOT / DECK DA CASA</label>
-          <select id="botDeck">
-            <option value="blueeyes">Blue-Eyes (demo)</option>
-            <option value="random">Aleatório (demo)</option>
-          </select>
-        </div>
-
-        <div class="stdl-box">
-          <label>SEU DECK - YDKE</label>
-          <textarea id="ydkeInput" placeholder="Cole aqui um código ydke://..."></textarea>
-          <button id="startRealBtn" type="button" style="width:100%;margin-top:7px;background:#6f2b91;border-color:#8e42b1">INICIAR / REINICIAR DUELO</button>
-          <div id="realHelp" style="margin-top:6px;color:#91a6b2;font-size:8px;line-height:1.45">
-            Cole um YDKE completo, escolha o bot e inicie o duelo.
-          </div>
-        </div>
-
-        <div class="stdl-box">
-          <label>LOG DO DUELO</label>
-          <div class="stdl-log" id="duelLog"></div>
-        </div>
+        <div class="stdl-box"><h3>Duel Lab / OCGCore</h3><p>Motor OCGCore em WebAssembly, dados Yu-Gi-Oh! do repositório e scripts Project Ignis carregados sob demanda por carta.</p><div class="stdl-engine"><span class="stdl-pill" id="realPill">OCGCORE: carregando</span><span class="stdl-pill" id="dbPill">BANCO: carregando</span></div></div>
+        <div class="stdl-box"><label>BOT / DECK DA CASA</label><select id="botDeck"><option value="blueeyes">Blue-Eyes</option><option value="random">Aleatório</option></select></div>
+        <div class="stdl-box"><label>SEU DECK — YDKE</label><textarea id="ydkeInput" placeholder="Cole aqui um código ydke://..."></textarea><button id="startRealBtn" type="button" style="width:100%;margin-top:7px">INICIAR / REINICIAR DUELO</button><div id="realHelp" style="margin-top:6px;color:#91a6b2;font-size:8px;line-height:1.45">Cole um YDKE completo e inicie o duelo.</div></div>
+        <div class="stdl-box"><label>LOG DO DUELO</label><div class="stdl-log" id="duelLog"></div></div>
       </div>
     </aside>
   </div>
 </div>
 <div class="stdl-toast" id="toast"></div>
-<div class="stdl-overlay" id="choiceOverlay" hidden>
-  <div class="stdl-choice-panel">
-    <div class="stdl-choice-head">
-      <strong id="choiceTitle">SELECIONE</strong>
-      <button id="choiceCloseBtn" type="button">X</button>
-    </div>
-    <div class="stdl-choice-text" id="choiceText"></div>
-    <div class="stdl-choice-cards" id="choiceCards"></div>
-    <div class="stdl-choice-actions" id="choiceActions"></div>
-  </div>
-</div>
+<div class="stdl-overlay" id="choiceOverlay" hidden><div class="stdl-choice-panel"><div class="stdl-choice-head"><strong id="choiceTitle">SELECIONE</strong><button id="choiceCloseBtn" type="button">X</button></div><div class="stdl-choice-text" id="choiceText"></div><div class="stdl-choice-cards" id="choiceCards"></div><div class="stdl-choice-actions" id="choiceActions"></div></div></div>
 <div class="stdl-card-menu" id="cardMenu"></div>
-
 <script src="./app.js"></script>
 </body>
 </html>
