@@ -11,5 +11,6 @@
     "prerelease-imph.cdb",
     "prerelease-others.cdb",
     "prerelease-yac1.cdb"
-  ]
+  ],
+  "bridgeSchema": "CardRecordInput-v1"
 }
