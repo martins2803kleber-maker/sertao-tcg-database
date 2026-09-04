@@ -6,7 +6,7 @@ window.__SERTAO_SITE_DATA_INSTALLED__=true;
 var nativeFetch=window.fetch&&window.fetch.bind(window);
 if(!nativeFetch)return;
 var CDN='https://cdn.jsdelivr.net/gh/martins2803kleber-maker/sertao-tcg-database@main/data/site/';
-var exact=/^https:\/\/(?:raw\.githubusercontent\.com\/martins2803kleber-maker\/sertao-tcg-database\/main|cdn\.jsdelivr\.net\/gh\/martins2803kleber-maker\/sertao-tcg-database@(?:main|[A-Fa-f0-9]+))\/data\/(yugioh|pokemon|onepiece)\.json(?:\?.*)?$/;
+var exact=/^https:\/\/(?:raw\.githubusercontent\.com\/martins2803kleber-maker\/sertao-tcg-database\/main|cdn\.jsdelivr\.net\/gh\/martins2803kleber-maker\/sertao-tcg-database@(?:main|[A-Fa-f0-9]+))\/data\/(yugioh|onepiece)\.json(?:\?.*)?$/;
 
 function sourceUrl(input){return typeof input==='string'?input:(input&&input.url)||'';}
 function cloneInit(init){var out={};if(init)Object.keys(init).forEach(function(k){out[k]=init[k];});out.cache='force-cache';return out;}
@@ -25,7 +25,7 @@ window.fetch=function(input,init){
 };
 
 window.SertaoTCGSiteData={
-  version:2,
+  version:'2.1',
   compactBase:CDN,
   originalFetch:nativeFetch,
   restore:function(){window.fetch=nativeFetch;window.__SERTAO_SITE_DATA_DISABLE__=true;}
