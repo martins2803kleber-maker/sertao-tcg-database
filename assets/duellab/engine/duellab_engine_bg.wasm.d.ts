@@ -1,0 +1,30 @@
+/* tslint:disable */
+/* eslint-disable */
+export const memory: WebAssembly.Memory;
+export const add_card: (a: number, b: number, c: number, d: number) => [number, number];
+export const bridge_version: () => [number, number];
+export const clear_registered_cards: () => void;
+export const create_duel: (a: number) => [number, number, number];
+export const destroy_duel: (a: number) => [number, number];
+export const init_engine: () => any;
+export const load_script: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
+export const process_duel: (a: number) => [number, number, number];
+export const register_cards: (a: number, b: number) => [number, number, number];
+export const set_response_bytes: (a: number, b: any) => [number, number];
+export const set_response_i: (a: number, b: number) => [number, number];
+export const start_duel: (a: number) => [number, number];
+export const wasm_bindgen_d1a1f5b9c1e1d7e3___convert__closures_____invoke___u32__u32__u32__i32__true_: (a: number, b: number, c: number, d: number, e: number) => number;
+export const wasm_bindgen_d1a1f5b9c1e1d7e3___convert__closures_____invoke___u32__u32__i32______true_: (a: number, b: number, c: number, d: number, e: number) => void;
+export const wasm_bindgen_d1a1f5b9c1e1d7e3___convert__closures_____invoke___u32__u32__i32______true__2: (a: number, b: number, c: number, d: number, e: number) => void;
+export const wasm_bindgen_d1a1f5b9c1e1d7e3___convert__closures_____invoke___wasm_bindgen_d1a1f5b9c1e1d7e3___JsValue__core_ed718c3d60ebd546___result__Result_____wasm_bindgen_d1a1f5b9c1e1d7e3___JsError___true_: (a: number, b: number, c: any) => [number, number];
+export const wasm_bindgen_d1a1f5b9c1e1d7e3___convert__closures_____invoke___u32__u32______true_: (a: number, b: number, c: number, d: number) => void;
+export const wasm_bindgen_d1a1f5b9c1e1d7e3___convert__closures_____invoke___js_sys_3433103401833a38___Function_fn_wasm_bindgen_d1a1f5b9c1e1d7e3___JsValue_____wasm_bindgen_d1a1f5b9c1e1d7e3___sys__Undefined___js_sys_3433103401833a38___Function_fn_wasm_bindgen_d1a1f5b9c1e1d7e3___JsValue_____wasm_bindgen_d1a1f5b9c1e1d7e3___sys__Undefined_______true_: (a: number, b: number, c: any, d: any) => void;
+export const __wbindgen_malloc: (a: number, b: number) => number;
+export const __wbindgen_realloc: (a: number, b: number, c: number, d: number) => number;
+export const __wbindgen_exn_store: (a: number) => void;
+export const __externref_table_alloc: () => number;
+export const __wbindgen_externrefs: WebAssembly.Table;
+export const __wbindgen_destroy_closure: (a: number, b: number) => void;
+export const __externref_table_dealloc: (a: number) => void;
+export const __wbindgen_free: (a: number, b: number, c: number) => void;
+export const __wbindgen_start: () => void;
