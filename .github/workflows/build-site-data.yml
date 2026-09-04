@@ -49,5 +49,6 @@ jobs:
             echo 'No site-data changes.'
           else
             git commit -m 'perf: rebuild site-optimized card data'
+            git pull --rebase origin main
             git push
           fi
