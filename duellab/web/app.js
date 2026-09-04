@@ -1,1 +1,18 @@
-const games={onepiece:{name:'One Piece Card Game',description:'Banco de cartas já existente no projeto, pronto para busca, montagem de deck e futura integração com o simulador.'},pokemon:{name:'Pokémon TCG',description:'Banco atualizado automaticamente, preparado para receber a nova busca e o deck builder do Duel Lab.'},yugioh:{name:'Yu-Gi-Oh!',description:'Base dedicada de cartas, pronta para ganhar ferramentas próprias dentro da mesma interface.'}};const cards=[...document.querySelectorAll('.game-card')];const title=document.querySelector('#selectedGame');const description=document.querySelector('#selectedDescription');const openLab=document.querySelector('#openLab');let selected='onepiece';cards.forEach(card=>{card.addEventListener('click',()=>{selected=card.dataset.game;cards.forEach(c=>c.classList.toggle('active',c===card));title.textContent=games[selected].name;description.textContent=games[selected].description;});});openLab.addEventListener('click',()=>{const label=games[selected].name;window.alert(`${label}: a base visual já está pronta. No próximo passo vamos ligar a busca de cartas e o Deck Builder.`);});
+(async function(){
+  const status=document.querySelector('#engineStatus');
+  const files=['01.txt','02.txt','03.txt','04.txt','05.txt','06.txt'];
+  try{
+    let source='';
+    for(let i=0;i<files.length;i++){
+      const file=files[i];
+      if(status)status.textContent='Carregando Duel Lab '+(i+1)+'/'+files.length+'...';
+      const response=await fetch('./chunks/'+file,{cache:'no-cache'});
+      if(!response.ok)throw new Error(file+' HTTP '+response.status);
+      source+=await response.text();
+    }
+    new Function(source+'\n//# sourceURL=duellab-runtime.js')();
+  }catch(error){
+    console.error(error);
+    if(status)status.textContent='Erro ao carregar Duel Lab: '+(error.message||error);
+  }
+})();
