@@ -1,6 +1,6 @@
 use std::cell::RefCell;
 use std::collections::HashMap;
-use std::ffi::{c_char, c_void, CString};
+use std::ffi::{c_char, c_void, CStr, CString};
 use std::ptr::null_mut;
 
 use js_sys::{Object, Reflect, Uint8Array};
@@ -56,6 +56,7 @@ struct CardRecordOwned {
 
 thread_local! {
     static CARDS: RefCell<HashMap<u32, CardRecordOwned>> = RefCell::new(HashMap::new());
+    static SCRIPTS: RefCell<HashMap<String, String>> = RefCell::new(HashMap::new());
     static DUELS: RefCell<HashMap<u32, OCG_Duel>> = RefCell::new(HashMap::new());
     static NEXT_DUEL_ID: RefCell<u32> = const { RefCell::new(1) };
 }
@@ -135,11 +136,35 @@ unsafe extern "C" fn card_reader_done(_payload: *mut c_void, _data: *mut OCG_Car
 
 unsafe extern "C" fn script_reader(
     _payload: *mut c_void,
-    _duel: OCG_Duel,
-    _name: *const c_char,
+    duel: OCG_Duel,
+    name_ptr: *const c_char,
 ) -> i32 {
-    // Duel Lab preloads all scripts asynchronously from the browser before the duel starts.
-    0
+    if name_ptr.is_null() {
+        return 0;
+    }
+    let requested = unsafe { CStr::from_ptr(name_ptr) }.to_string_lossy().to_string();
+    let basename = requested.rsplit('/').next().unwrap_or(&requested).to_string();
+    let source = SCRIPTS.with(|scripts| {
+        let scripts = scripts.borrow();
+        scripts
+            .get(&requested)
+            .or_else(|| scripts.get(&basename))
+            .cloned()
+    });
+    let Some(source) = source else {
+        return 0;
+    };
+    let Ok(cname) = CString::new(requested) else {
+        return 0;
+    };
+    unsafe {
+        OCG_LoadScript(
+            duel,
+            source.as_ptr() as *const c_char,
+            source.len() as u32,
+            cname.as_ptr(),
+        )
+    }
 }
 
 unsafe extern "C" fn log_handler(
@@ -224,6 +249,27 @@ pub fn register_cards(json: &str) -> Result<u32, JsValue> {
 #[wasm_bindgen]
 pub fn clear_registered_cards() {
     CARDS.with(|cards| cards.borrow_mut().clear());
+}
+
+#[wasm_bindgen]
+pub fn register_scripts(json: &str) -> Result<u32, JsValue> {
+    let values: HashMap<String, String> =
+        serde_json::from_str(json).map_err(|e| JsValue::from_str(&format!("script json: {e}")))?;
+    let count = values.len() as u32;
+    SCRIPTS.with(|scripts| {
+        let mut map = scripts.borrow_mut();
+        for (name, source) in values {
+            let base = name.rsplit('/').next().unwrap_or(&name).to_string();
+            map.insert(name, source.clone());
+            map.insert(base, source);
+        }
+    });
+    Ok(count)
+}
+
+#[wasm_bindgen]
+pub fn clear_registered_scripts() {
+    SCRIPTS.with(|scripts| scripts.borrow_mut().clear());
 }
 
 #[wasm_bindgen]
@@ -360,5 +406,5 @@ pub fn destroy_duel(duel_id: u32) -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub fn bridge_version() -> String {
-    "sertaotcg-duellab-ocgcore-bridge/0.2.0".to_string()
+    "sertaotcg-duellab-ocgcore-bridge/0.3.0".to_string()
 }
