@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # Builds the browser-optimized mirrors used by search, filters, decklists and Deck Builder.
-# Pokemon metadata compatibility hotfix: 2026-09-04.
+# Pokemon Standard hotfix: dedicated, prevalidated Standard dataset.
 from __future__ import annotations
 import hashlib, json, re, shutil
+from datetime import date, datetime, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -89,11 +90,67 @@ def detail_bucket(game: str, c: dict) -> str:
     code = str(c.get('code') or c.get('id') or 'UNKNOWN').upper()
     return clean_set(code.split('-')[0])
 
+def norm(v):
+    return re.sub(r'\s+', ' ', str(v or '').strip().lower())
+
+def pokemon_release_date(c: dict):
+    v = c.get('releaseDate')
+    if not v and isinstance(c.get('set'), dict):
+        v = c['set'].get('releaseDate') or c['set'].get('release_date')
+    if not v:
+        return None
+    s = str(v).strip().replace('/', '-')
+    try:
+        return datetime.strptime(s[:10], '%Y-%m-%d').date()
+    except ValueError:
+        return None
+
+def pokemon_standard_status(c: dict) -> str:
+    leg = c.get('legalities') if isinstance(c.get('legalities'), dict) else {}
+    if not leg and isinstance(c.get('legality'), dict):
+        leg = c.get('legality')
+    return norm(leg.get('standard'))
+
+def pokemon_direct_standard_legal(c: dict, cutoff: date) -> bool:
+    status = pokemon_standard_status(c)
+    if status == 'legal':
+        return True
+    if status in {'not legal','illegal','banned'}:
+        return False
+    mark = str(c.get('regulationMark') or '').strip().upper()
+    if not mark or mark < 'H':
+        return False
+    released = pokemon_release_date(c)
+    # Missing date must not erase an otherwise current H/I/J card.
+    return released is None or released <= cutoff
+
+def pokemon_standard_cards(compact_cards: list[dict]) -> list[dict]:
+    cutoff = date.today() - timedelta(days=14)
+    legal_names = set()
+    direct = []
+    for c in compact_cards:
+        if pokemon_direct_standard_legal(c, cutoff):
+            direct.append(c)
+            name = norm(c.get('nameEn') or c.get('name'))
+            if name:
+                legal_names.add(name)
+    # Older printings are legal when a current printing with the same name is legal.
+    out = []
+    seen = set()
+    for c in compact_cards:
+        name = norm(c.get('nameEn') or c.get('name'))
+        if c in direct or (name and name in legal_names):
+            key = str(c.get('id') or '') + '|' + str(c.get('setId') or c.get('setCode') or c.get('set') or '') + '|' + str(c.get('number') or '')
+            if key not in seen:
+                seen.add(key)
+                out.append(c)
+    return out
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     if DETAIL.exists(): shutil.rmtree(DETAIL)
     DETAIL.mkdir(parents=True, exist_ok=True)
-    manifest = {'schema':2,'games':{}}
+    manifest = {'schema':3,'games':{}}
 
     for game in ('yugioh','pokemon','onepiece'):
         src_path = DATA / f'{game}.json'
@@ -104,16 +161,27 @@ def main():
         if isinstance(payload, dict):
             for k in ('meta','updatedAt','updated_at','source','version'):
                 if k in payload: compact_payload[k] = payload[k]
-        compact_payload['siteSchema'] = 2
+        compact_payload['siteSchema'] = 3
         dest = OUT / f'{game}.json'
         write_json(dest, compact_payload)
+
+        if game == 'pokemon':
+            standard = pokemon_standard_cards(compact_cards)
+            std_path = OUT / 'pokemon_standard.json'
+            write_json(std_path, {
+                'cards': standard,
+                'siteSchema': 3,
+                'format': 'standard-2026',
+                'regulationMarks': ['H','I','J'],
+                'generatedAt': date.today().isoformat()
+            })
 
         buckets = {}
         for c in compact_cards:
             buckets.setdefault(detail_bucket(game,c), []).append(c)
         game_dir = DETAIL / game
         for bucket, items in buckets.items():
-            write_json(game_dir / f'{bucket}.json', {'cards':items,'siteSchema':2})
+            write_json(game_dir / f'{bucket}.json', {'cards':items,'siteSchema':3})
 
         raw_size = src_path.stat().st_size
         compact_size = dest.stat().st_size
@@ -124,6 +192,10 @@ def main():
             'sha256':sha, 'detailBuckets':len(buckets),
             'url':f'data/site/{game}.json'
         }
+        if game == 'pokemon':
+            manifest['games'][game]['standardCards'] = len(standard)
+            manifest['games'][game]['standardUrl'] = 'data/site/pokemon_standard.json'
+            manifest['games'][game]['standardBytes'] = (OUT / 'pokemon_standard.json').stat().st_size
     write_json(OUT / 'manifest.json', manifest)
     print(json.dumps(manifest, ensure_ascii=False, indent=2))
 
