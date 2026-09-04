@@ -20,19 +20,66 @@
     <main class="stdl-main">
       <div class="stdl-arena">
         <div class="stdl-opponent"><div class="stdl-avatar">B</div><div class="stdl-meta"><strong>BOT SERTÃO</strong><small>OCGCore opponent</small></div><div class="stdl-lp"><span id="botLP">8000</span> LP</div></div>
+
         <section class="stdl-field">
-          <div class="stdl-board-line"><div class="stdl-pile bot-pile" id="botExtraPile"><b>EXTRA</b><span id="botExtraCount">0</span></div><div class="stdl-row" id="botSpell"></div><div class="stdl-pile bot-pile" id="botDeckPile"><b>DECK</b><span id="botDeckCount">0</span></div></div>
-          <div class="stdl-board-line"><div class="stdl-pile bot-pile" id="botBanishedPile"><b>BAN</b><span>0</span></div><div class="stdl-row" id="botMonsters"></div><div class="stdl-pile bot-pile" id="botGyPile"><b>GY</b><span id="botGyCount">0</span></div></div>
+          <div class="stdl-board-line stdl-board-line-back bot-back-row">
+            <div class="stdl-pile bot-pile" id="botDeckPile"><b>DECK</b><span id="botDeckCount">0</span></div>
+            <div class="stdl-row stdl-spell-row" id="botSpell"></div>
+            <div class="stdl-side-stack bot-side-stack">
+              <div class="stdl-static-zone stdl-field-zone bot-static" id="botFieldZone"><span>FIELD</span></div>
+              <div class="stdl-pile bot-pile compact" id="botExtraPile"><b>EXTRA</b><span id="botExtraCount">0</span></div>
+            </div>
+          </div>
+
+          <div class="stdl-board-line stdl-board-line-front bot-front-row">
+            <div class="stdl-side-stack bot-side-stack left-stack">
+              <div class="stdl-pile bot-pile" id="botGyPile"><b>GY</b><span id="botGyCount">0</span></div>
+              <div class="stdl-mini-pile" id="botBanishedPile"><b>BAN</b><span>0</span></div>
+            </div>
+            <div class="stdl-row stdl-monster-row" id="botMonsters"></div>
+            <div class="stdl-edge-spacer"></div>
+          </div>
+
+          <div class="stdl-emz-band" aria-label="Extra Monster Zones">
+            <div id="extraMonsterZoneLeft" class="stdl-zone stdl-emz-zone">EMZ</div>
+            <div id="extraMonsterZoneRight" class="stdl-zone stdl-emz-zone">EMZ</div>
+          </div>
+
           <div class="stdl-phasebar" id="phaseBar"><button data-phase="DP">DP</button><button data-phase="SP">SP</button><button data-phase="M1" class="active">M1</button><button data-phase="BP">BP</button><button data-phase="M2">M2</button><button data-phase="EP">EP</button></div>
-          <div class="stdl-board-line"><div class="stdl-pile player-pile" id="playerGyPile"><b>GY</b><span id="playerGyCount">0</span></div><div class="stdl-row" id="playerMonsters"></div><div class="stdl-pile player-pile" id="playerBanishedPile"><b>BAN</b><span>0</span></div></div>
-          <div class="stdl-board-line"><div class="stdl-pile player-pile" id="playerDeckPile"><b>DECK</b><span id="playerDeckCount">0</span></div><div class="stdl-row" id="playerSpell"></div><div class="stdl-pile player-pile" id="playerExtraPile"><b>EXTRA</b><span id="playerExtraCount">0</span></div></div>
+
+          <div class="stdl-board-line stdl-board-line-front player-front-row">
+            <div class="stdl-edge-spacer"></div>
+            <div class="stdl-row stdl-monster-row" id="playerMonsters"></div>
+            <div class="stdl-side-stack player-side-stack right-stack">
+              <div class="stdl-pile player-pile" id="playerGyPile"><b>GY</b><span id="playerGyCount">0</span></div>
+              <div class="stdl-mini-pile" id="playerBanishedPile"><b>BAN</b><span>0</span></div>
+            </div>
+          </div>
+
+          <div class="stdl-board-line stdl-board-line-back player-back-row">
+            <div class="stdl-side-stack player-side-stack">
+              <div class="stdl-static-zone stdl-field-zone player-static" id="playerFieldZone"><span>FIELD</span></div>
+              <div class="stdl-pile player-pile compact" id="playerExtraPile"><b>EXTRA</b><span id="playerExtraCount">0</span></div>
+            </div>
+            <div class="stdl-row stdl-spell-row" id="playerSpell"></div>
+            <div class="stdl-pile player-pile" id="playerDeckPile"><b>DECK</b><span id="playerDeckCount">0</span></div>
+          </div>
         </section>
+
         <div class="stdl-hand-wrap"><div class="stdl-hand-label">SUA MÃO</div><div class="stdl-hand" id="playerHand"></div></div>
         <div class="stdl-player"><div class="stdl-avatar">S</div><div class="stdl-meta"><strong>VOCÊ</strong><small id="deckLabel">Deck carregado</small></div><div class="stdl-lp"><span id="playerLP">8000</span> LP</div></div>
-        <aside class="stdl-card-preview" id="cardPreview"><div class="stdl-card-preview-empty"><strong>CARD DETAILS</strong><span>Passe o mouse em uma carta para ver imagem, atributos e efeito.</span></div><div class="stdl-card-preview-content" hidden><div class="stdl-card-preview-image-wrap"><img class="stdl-card-preview-image" alt=""></div><div class="stdl-card-preview-info"><span class="stdl-card-preview-type"></span><h3 class="stdl-card-preview-name"></h3><div class="stdl-card-preview-stats"></div><div class="stdl-card-preview-effect"></div></div></div></aside>
+
+        <aside class="stdl-card-preview" id="cardPreview">
+          <div class="stdl-card-preview-empty"><strong>CARD DETAILS</strong><span>Passe o mouse em uma carta para ver imagem, atributos e efeito.</span></div>
+          <div class="stdl-card-preview-content" hidden>
+            <div class="stdl-card-preview-image-wrap"><img class="stdl-card-preview-image" alt=""></div>
+            <div class="stdl-card-preview-info"><span class="stdl-card-preview-type"></span><h3 class="stdl-card-preview-name"></h3><div class="stdl-card-preview-stats"></div><div class="stdl-card-preview-effect"></div></div>
+          </div>
+        </aside>
         <div class="stdl-duel-hintbar"><span id="duelHint">Botão direito nas cartas mostra as ações legais retornadas pelo motor.</span><button id="passChainBtn" type="button" hidden>NÃO ATIVAR / PASSAR</button></div>
       </div>
     </main>
+
     <aside class="stdl-side">
       <button class="stdl-tools-toggle" id="toolsToggle" type="button"><span>PAINEL DO DUELO</span><span id="toolsToggleIcon">+</span></button>
       <div class="stdl-tools" id="duelTools">
