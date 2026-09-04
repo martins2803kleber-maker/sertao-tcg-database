@@ -1,0 +1,35 @@
+name: Duel Lab CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'duellab/web/**'
+      - 'duellab/engine/**'
+      - 'scripts/build-card-bundles.mjs'
+      - '.github/workflows/duellab-ci.yml'
+  pull_request:
+    paths:
+      - 'duellab/web/**'
+      - 'duellab/engine/**'
+
+jobs:
+  validate-web-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check loader syntax
+        run: node --check duellab/web/app.js
+      - name: Check concatenated runtime syntax
+        run: |
+          cat duellab/web/chunks/01.txt duellab/web/chunks/02.txt duellab/web/chunks/03.txt duellab/web/chunks/04.txt duellab/web/chunks/05.txt duellab/web/chunks/06.txt > /tmp/duellab-runtime.js
+          node --check /tmp/duellab-runtime.js
+      - name: Validate local CardScripts bundle
+        run: |
+          node -e "const fs=require('fs');const p='duellab/web/cardscripts/manifest.json';if(!fs.existsSync(p)) throw Error('missing CardScripts manifest');const m=JSON.parse(fs.readFileSync(p));if(m.cardFiles<20000) throw Error('incomplete card bundle: '+m.cardFiles);if(m.coreFiles<20) throw Error('incomplete core bundle: '+m.coreFiles);console.log(m)"
+      - name: Verify critical duel handlers
+        run: |
+          grep -q "function parseIdle" duellab/web/chunks/05.txt
+          grep -q "function parseChain" duellab/web/chunks/05.txt
+          grep -q "function handlePacket" duellab/web/chunks/06.txt
+          grep -q "function pumpReal" duellab/web/chunks/06.txt
