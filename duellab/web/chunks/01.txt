@@ -1,0 +1,256 @@
+(function(){
+'use strict';
+
+var DB_URLS=[
+  '../../data/yugioh.json',
+  'https://raw.githubusercontent.com/martins2803kleber-maker/sertao-tcg-database/main/data/yugioh.json',
+  'https://cdn.jsdelivr.net/gh/martins2803kleber-maker/sertao-tcg-database@main/data/yugioh.json'
+];
+
+var state={
+  db:[], byId:new Map(), playerDeck:[], botDeck:[],
+  playerHand:[], botHand:[], playerField:[], botField:[],
+  playerLP:8000, botLP:8000, turn:1, playerTurn:true, normalUsed:false,
+  demo:false, previewMap:new Map(), playerExtra:[],botExtra:[],playerGY:[],botGY:[],playerBanished:[],botBanished:[],playerSpellField:[],botSpellField:[],selectedCard:null,selectedSide:null,phase:'M1'
+};
+
+var $=function(q){return document.querySelector(q)};
+var logEl=$('#duelLog');
+
+function log(txt){
+  var d=document.createElement('div');
+  d.innerHTML=txt;
+  logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;
+}
+function toast(t){var e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toast.t);toast.t=setTimeout(function(){e.style.display='none'},1700)}
+var toolsToggle=$('#toolsToggle'), duelTools=$('#duelTools'), toolsToggleIcon=$('#toolsToggleIcon');
+if(toolsToggle){
+  toolsToggle.onclick=function(){
+    var open=duelTools.classList.toggle('is-open');
+    toolsToggleIcon.textContent=open?'-':'+';
+  };
+}
+
+var fullscreenBtn=$('#fullscreenBtn');
+function isFullscreen(){
+  return document.fullscreenElement || document.webkitFullscreenElement;
+}
+function updateFullscreenButton(){
+  if(!fullscreenBtn)return;
+  var on=!!isFullscreen();
+  var txt=fullscreenBtn.querySelector('.stdl-fullscreen-text');
+  var ico=fullscreenBtn.querySelector('.stdl-fullscreen-icon');
+  if(txt)txt.textContent=on?'SAIR DA TELA CHEIA':'TELA CHEIA';
+  if(ico)ico.textContent=on?'X':'[ ]';
+}
+if(fullscreenBtn){
+  fullscreenBtn.onclick=function(){
+    var app=document.querySelector('.stdl-app');
+    if(!isFullscreen()){
+      var req=app.requestFullscreen || app.webkitRequestFullscreen;
+      if(req){
+        try{
+          var p=req.call(app);
+          if(p && p.catch)p.catch(function(){});
+        }catch(e){}
+      }
+    }else{
+      var exit=document.exitFullscreen || document.webkitExitFullscreen;
+      if(exit) exit.call(document);
+    }
+  };
+  document.addEventListener('fullscreenchange',updateFullscreenButton);
+  document.addEventListener('webkitfullscreenchange',updateFullscreenButton);
+}
+
+function shuffle(a){for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var x=a[i];a[i]=a[j];a[j]=x}return a}
+function img(c){
+  if(!c)return '';
+  var raw=c.raw||c;
+  var urls=[
+    c.image_url_small,c.image_url,c.image_small,c.image,c.img,c.imageUrl,
+    raw.image_url_small,raw.image_url,raw.image_small,raw.image,raw.img,raw.imageUrl,
+    c.card_images&&c.card_images[0]&&(c.card_images[0].image_url_small||c.card_images[0].image_url),
+    raw.card_images&&raw.card_images[0]&&(raw.card_images[0].image_url_small||raw.card_images[0].image_url)
+  ].filter(Boolean);
+  return urls[0]||'';
+}
+function atk(c){var n=Number(c&&c.atk);return isFinite(n)?n:0}
+function isMonster(c){return !!c && /monster/i.test(String(c.type||c.card_type||''))}
+function cardName(c){
+  if(!c)return 'Card';
+  var raw=c.raw||c;
+  return String(
+    c.name_en || raw.name_en ||
+    c.english_name || raw.english_name ||
+    c.name || raw.name ||
+    'Card'
+  );
+}
+function cardDesc(c){
+  if(!c)return '';
+  var raw=c.raw||c;
+  return String(
+    c.desc_en || raw.desc_en ||
+    c.description_en || raw.description_en ||
+    c.effect_en || raw.effect_en ||
+    c.text_en || raw.text_en ||
+    c.english_desc || raw.english_desc ||
+    c.desc || raw.desc ||
+    c.description || raw.description ||
+    c.effect || raw.effect ||
+    c.text || raw.text ||
+    'No English description available in the local database.'
+  );
+}
+function cardType(c){
+  if(!c)return '';
+  var raw=c.raw||c;
+  return String(
+    c.type_en || raw.type_en ||
+    c.english_type || raw.english_type ||
+    c.type || raw.type ||
+    c.card_type || raw.card_type ||
+    'Card'
+  );
+}
+function mostlyJapanese(s){
+  s=String(s||'');
+  if(!s)return false;
+  var jp=(s.match(/[\u3040-\u30ff\u3400-\u9fff]/g)||[]).length;
+  return jp > Math.max(4, s.length * 0.16);
+}
+function englishCardDesc(c){
+  var raw=c&&c.raw?c.raw:c;
+  if(!raw)return '';
+  var explicit=String(
+    raw.desc_en || raw.description_en || raw.effect_en || raw.text_en ||
+    raw.english_desc || ''
+  ).trim();
+  if(explicit)return explicit;
+
+  var fallback=cardDesc(c);
+  if(mostlyJapanese(fallback)){
+    return 'English effect text is not available for this card in the current local database.';
+  }
+  return fallback;
+}
+
+function cardDef(c){
+  var raw=c&&c.raw?c.raw:c;
+  var n=Number(raw&&raw.def);
+  return isFinite(n)?n:null;
+}
+function cardLevel(c){
+  var raw=c&&c.raw?c.raw:c;
+  var n=Number(raw&&(raw.level||raw.rank||raw.linkval));
+  return isFinite(n)&&n>0?n:null;
+}
+function previewKey(c){
+  if(!c)return '';
+  return String(c.id||c.baseId||c.originalId||c.name||c.name_en||'');
+}
+function showCardPreview(c){
+  if(!c)return;
+  var panel=$('#cardPreview');
+  if(!panel)return;
+  var empty=panel.querySelector('.stdl-card-preview-empty');
+  var content=panel.querySelector('.stdl-card-preview-content');
+  var image=panel.querySelector('.stdl-card-preview-image');
+  var type=panel.querySelector('.stdl-card-preview-type');
+  var name=panel.querySelector('.stdl-card-preview-name');
+  var stats=panel.querySelector('.stdl-card-preview-stats');
+  var effect=panel.querySelector('.stdl-card-preview-effect');
+
+  empty.style.display='none';
+  content.hidden=false;
+  image.src=img(c)||'';
+  image.alt=cardName(c);
+  type.textContent=cardType(c);
+  name.textContent=cardName(c);
+  var items=[];
+  if(isMonster(c)){
+    items.push('<span>ATK '+atk(c)+'</span>');
+    var d=cardDef(c); if(d!==null)items.push('<span>DEF '+d+'</span>');
+    var lv=cardLevel(c); if(lv!==null)items.push('<span>LEVEL/RANK '+lv+'</span>');
+  }
+  stats.innerHTML=items.join('');
+  effect.textContent=englishCardDesc(c);
+}
+function attachCardPreviews(){
+  document.querySelectorAll('[data-preview-key]').forEach(function(el){
+    var key=el.getAttribute('data-preview-key');
+    var c=state.previewMap&&state.previewMap.get(key);
+    if(!c)return;
+    el.onmouseenter=function(){showCardPreview(c)};
+    el.onfocus=function(){showCardPreview(c)};
+  });
+}
+
+
+async function loadDB(){
+  for(var u of DB_URLS){
+    try{
+      var r=await fetch(u,{cache:'force-cache'});
+      if(!r.ok)throw new Error('HTTP '+r.status);
+      var data=await r.json();
+      if(!Array.isArray(data))data=data.data||data.cards||[];
+      state.db=data;
+      state.byId=new Map();
+      data.forEach(function(c){
+        [c.id,c.baseId,c.originalId].filter(Boolean).forEach(function(id){state.byId.set(String(id),c)});
+      });
+      $('#dbPill').textContent='BANCO: '+data.length+' cartas';
+      $('#dbPill').classList.add('ok');
+      log('<b>Banco:</b> '+data.length+' cartas carregadas.');
+      return;
+    }catch(e){}
+  }
+  $('#dbPill').textContent='BANCO: falhou';
+  log('<b>Erro:</b> não foi possível carregar yugioh.json.');
+}
+
+function parseYdkeMain(code){
+  if(!code||code.indexOf('ydke://')!==0)return [];
+  var parts=code.slice(7).split('!');
+  function decode(s){
+    if(!s)return [];
+    try{
+      var b=atob(s),out=[];
+      for(var i=0;i+3<b.length;i+=4){
+        out.push((b.charCodeAt(i)|(b.charCodeAt(i+1)<<8)|(b.charCodeAt(i+2)<<16)|(b.charCodeAt(i+3)<<24))>>>0);
+      }
+      return out;
+    }catch(e){return []}
+  }
+  return decode(parts[0]||'');
+}
+
+function resolveIds(ids){
+  return ids.map(function(id){return state.byId.get(String(id))}).filter(Boolean);
+}
+function parseYdkeFull(code){
+  var empty={main:[],extra:[],side:[]};
+  if(!code||code.indexOf('ydke://')!==0)return empty;
+  var parts=code.slice(7).split('!');
+  while(parts.length<3)parts.push('');
+  function decode(s){
+    if(!s)return [];
+    try{
+      var b=atob(s),out=[];
+      for(var i=0;i+3<b.length;i+=4){
+        out.push((b.charCodeAt(i)|(b.charCodeAt(i+1)<<8)|(b.charCodeAt(i+2)<<16)|(b.charCodeAt(i+3)<<24))>>>0);
+      }
+      return out;
+    }catch(e){return []}
+  }
+  return {main:decode(parts[0]),extra:decode(parts[1]),side:decode(parts[2])};
+}
+function parseYdke(code){ return parseYdkeFull(code).main; }
+
+
+function demoDeck(){
+  var monsters=state.db.filter(isMonster).filter(function(c){return atk(c)>=1000 && atk(c)<=3000});
+  var pool=monsters.length?monsters:state.db;
+  var arr=[];
+  for(var i=0;i<40;i++) 
