@@ -7,6 +7,8 @@ export function bridge_version(): string;
 
 export function clear_registered_cards(): void;
 
+export function clear_registered_scripts(): void;
+
 export function create_duel(extra_flags: number): number;
 
 export function destroy_duel(duel_id: number): void;
@@ -18,6 +20,8 @@ export function load_script(duel_id: number, name: string, source: string): bool
 export function process_duel(duel_id: number): any;
 
 export function register_cards(json: string): number;
+
+export function register_scripts(json: string): number;
 
 export function set_response_bytes(duel_id: number, bytes: Uint8Array): void;
 
@@ -32,12 +36,14 @@ export interface InitOutput {
     readonly add_card: (a: number, b: number, c: number, d: number) => [number, number];
     readonly bridge_version: () => [number, number];
     readonly clear_registered_cards: () => void;
+    readonly clear_registered_scripts: () => void;
     readonly create_duel: (a: number) => [number, number, number];
     readonly destroy_duel: (a: number) => [number, number];
     readonly init_engine: () => any;
     readonly load_script: (a: number, b: number, c: number, d: number, e: number) => [number, number, number];
     readonly process_duel: (a: number) => [number, number, number];
     readonly register_cards: (a: number, b: number) => [number, number, number];
+    readonly register_scripts: (a: number, b: number) => [number, number, number];
     readonly set_response_bytes: (a: number, b: any) => [number, number];
     readonly set_response_i: (a: number, b: number) => [number, number];
     readonly start_duel: (a: number) => [number, number];
