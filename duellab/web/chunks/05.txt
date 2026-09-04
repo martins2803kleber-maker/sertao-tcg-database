@@ -1,0 +1,173 @@
+dos.');
+    populateRealBotDecks();
+  }catch(e){
+    real.ready=false;
+    setRealStatus('OCGCORE: aguardando build',false);
+    console.warn('Real core load:',e);
+  }
+}
+function populateRealBotDecks(){
+  var sel=$('#botDeck'); if(!sel)return;
+  var names=Object.keys(real.botDecks);
+  if(!names.length)return;
+  var current=sel.value; sel.innerHTML='';
+  names.forEach(function(name){var o=document.createElement('option');o.value=name;o.textContent=name.replace(/([a-z])([A-Z])/g,'$1 $2');sel.appendChild(o)});
+  if(names.indexOf(current)>=0)sel.value=current;
+}
+var SCRIPT_SEARCH_ROOTS=['','official/','pre-errata/','goat/','unofficial/'];
+var GLOBAL_SCRIPT_FILES=[
+  'constant.lua','utility.lua','archetype_setcode_constants.lua','card_counter_constants.lua',
+  'cards_specific_functions.lua','chain.lua','deprecated_functions.lua',
+  'proc_fusion.lua','proc_synchro.lua','proc_xyz.lua','proc_link.lua','proc_pendulum.lua',
+  'proc_ritual.lua','proc_equip.lua','proc_union.lua','proc_spirit.lua','proc_gemini.lua',
+  'proc_workaround.lua'
+];
+var scriptPathCache=new Map();
+
+async function fetchLuaExact(path){
+  var r=await fetch(CARD_SCRIPT_BASE+path,{cache:'force-cache'});
+  if(!r.ok)throw Error(path+' '+r.status);
+  return r.text();
+}
+async function resolveLua(name,preferredRoot){
+  if(scriptPathCache.has(name)){
+    var cached=scriptPathCache.get(name);
+    return {path:cached,src:await fetchLuaExact(cached)};
+  }
+  var candidates=[];
+  if(preferredRoot)candidates.push(preferredRoot+name);
+  SCRIPT_SEARCH_ROOTS.forEach(function(root){var p=root+name;if(candidates.indexOf(p)<0)candidates.push(p)});
+  var lastErr=null;
+  for(var i=0;i<candidates.length;i++){
+    try{
+      var src=await fetchLuaExact(candidates[i]);
+      scriptPathCache.set(name,candidates[i]);
+      return {path:candidates[i],src:src};
+    }catch(e){lastErr=e}
+  }
+  throw lastErr||Error('Script não encontrado: '+name);
+}
+async function fetchLua(path){
+  var leaf=String(path||'').split('/').pop();
+  var preferred=String(path||'').includes('/')?String(path).slice(0,String(path).lastIndexOf('/')+1):'';
+  return (await resolveLua(leaf,preferred)).src;
+}
+async function loadLuaSafe(name,path){
+  try{
+    var resolved=await resolveLua(path||name,'');
+    return !!real.mod.load_script(real.duel,name,resolved.src);
+  }catch(e){ console.warn('Lua',name,e); return false; }
+}
+async function prepareScripts(ids){
+  if(typeof real.mod.register_scripts!=='function')throw Error('OCGCore browser bridge incompatível.');
+  var wanted=GLOBAL_SCRIPT_FILES.concat(Array.from(new Set(ids.map(function(x){return 'c'+Number(x)+'.lua'}))));
+  var bundle={},seen=new Set(),queue=wanted.map(function(name){return {name:name,preferred:''}}),done=0,missed=[];
+  while(queue.length){
+    var job=queue.shift(), name=job.name;
+    if(seen.has(name))continue; seen.add(name);
+    try{
+      var resolved=await resolveLua(name,job.preferred||'');
+      bundle[name]=resolved.src; done++;
+      var root=resolved.path.includes('/')?resolved.path.slice(0,resolved.path.lastIndexOf('/')+1):'';
+      var re=/Duel\.LoadScript\(["']([^"']+)["']\)/g,mm;
+      while((mm=re.exec(resolved.src))){
+        var dep=mm[1],leaf=dep.split('/').pop();
+        if(!seen.has(leaf))queue.push({name:leaf,preferred:dep.includes('/')?dep.slice(0,dep.lastIndexOf('/')+1):root});
+      }
+      if(done%10===0)$('#realHelp').textContent='Carregando scripts EDOPro / Project Ignis: '+done;
+    }catch(e){
+      missed.push(name);
+      console.debug('Script indisponível:',name,e);
+    }
+  }
+  real.mod.clear_registered_scripts();
+  real.mod.register_scripts(JSON.stringify(bundle));
+  for(var i=0;i<GLOBAL_SCRIPT_FILES.length;i++){
+    var g=GLOBAL_SCRIPT_FILES[i];
+    if(bundle[g])real.mod.load_script(real.duel,g,bundle[g]);
+  }
+  if(missed.length)console.debug('Scripts não necessários/ausentes:',missed);
+  return Object.keys(bundle).length;
+}
+function coreRecords(ids){
+  var set=new Set(ids.map(Number));
+  return real.coreCards.filter(function(c){return set.has(Number(c.id))});
+}
+function setupMirrorFromDecks(player,bot){
+  state.playerLP=8000;state.botLP=8000;state.playerField=Array(5).fill(null);state.botField=Array(5).fill(null);
+  state.playerHand=[];state.botHand=[];state.playerDeck=player.main.map(cardByCode);state.botDeck=(bot.main||[]).map(cardByCode);state.playerSpellField=Array(5).fill(null);state.botSpellField=Array(5).fill(null);
+  state.playerExtra=(player.extra||[]).map(cardByCode);state.botExtra=(bot.extra||[]).map(cardByCode);
+  state.playerGY=[];state.botGY=[];state.playerBanished=[];state.botBanished=[];
+  state.playerTurn=true;state.turn=0;state.phase='M1';render();
+}
+async function startRealDuel(){
+  if(real.busy)return;
+  real.busy=true;
+  try{
+    if(!real.ready)await loadRealResources();
+    if(!real.ready)throw Error('O motor real ainda não terminou de compilar no GitHub.');
+    var player=parseYdkeFull($('#ydkeInput').value.trim());
+    if(player.main.length<40)throw Error('Cole um YDKE válido com pelo menos 40 cartas no Main Deck.');
+    var botName=$('#botDeck').value;
+    var bot=real.botDecks[botName]||real.botDecks[Object.keys(real.botDecks)[0]];
+    if(!bot)throw Error('Nenhum Deck da Casa foi encontrado.');
+    if(real.duel){try{real.mod.destroy_duel(real.duel)}catch(e){}}
+    var ids=[].concat(player.main,player.extra,bot.main||[],bot.extra||[]);
+    var rec=coreRecords(ids);
+    if(rec.length<Math.min(20,new Set(ids).size))throw Error('Dados do core incompletos para este deck.');
+    real.mod.clear_registered_cards();
+    real.mod.register_cards(JSON.stringify(rec));
+    real.duel=real.mod.create_duel(0);
+    real.playerDeck=player;real.botDeck=bot;real.pending=null;real.retryCount=0;real.pumping=false;
+    setupMirrorFromDecks(player,bot);
+    $('#realHelp').textContent='Carregando scripts EDOPro / Project Ignis...';
+    var scriptCount=await prepareScripts(ids);
+    log('<b>Scripts:</b> '+scriptCount+' scripts EDOPro / Project Ignis registrados para este duelo.');
+    // Add main/extra in reverse, exactly like EDOPro SingleMode.
+    [player,bot].forEach(function(deck,team){
+      (deck.main||[]).slice().reverse().forEach(function(code){real.mod.add_card(real.duel,team,Number(code),0x1)});
+      (deck.extra||[]).slice().reverse().forEach(function(code){real.mod.add_card(real.duel,team,Number(code),0x40)});
+    });
+    real.mod.start_duel(real.duel);
+    real.active=true; state.playerTurn=true;
+    $('#realHelp').textContent='Duelo iniciado. Clique com o botão direito nas cartas para ações legais.';
+    logEl.innerHTML='';
+    log('<b>OCGCore:</b> duelo real iniciado - Você vs '+botName+'.');
+    await pumpReal();
+  }catch(e){
+    log('<b>Erro no OCGCore:</b> '+String(e.message||e));
+    $('#realHelp').textContent='ERRO REAL: '+String(e.message||e);
+  }finally{real.busy=false}
+}
+function parseIdle(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++), groups=[];
+  function cards(seq32,activate){
+    var n=u32(dv,o);o+=4;var a=[];
+    for(var i=0;i<n;i++){
+      var c=readCardRef(dv,o,seq32);o=c.next;
+      if(activate){c.description=u64num(dv,o);o+=8;c.clientMode=dv.getUint8(o++)}
+      a.push(c);
+    }return a;
+  }
+  groups.push(cards(true,false)); // summon
+  groups.push(cards(true,false)); // special
+  groups.push(cards(false,false)); // reposition
+  groups.push(cards(true,false)); // mset
+  groups.push(cards(true,false)); // sset
+  groups.push(cards(true,true)); // activate
+  return {msg:11,player:player,summon:groups[0],special:groups[1],reposition:groups[2],mset:groups[3],sset:groups[4],activate:groups[5],toBP:!!dv.getUint8(o++),toEP:!!dv.getUint8(o++),shuffle:!!dv.getUint8(o++)};
+}
+function parseBattle(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1,player=dv.getUint8(o++);
+  var na=u32(dv,o);o+=4,act=[];
+  for(var i=0;i<na;i++){var c=readCardRef(dv,o,true);o=c.next;c.description=u64num(dv,o);o+=8;c.clientMode=dv.getUint8(o++);act.push(c)}
+  var nb=u32(dv,o);o+=4,atklist=[];
+  for(var j=0;j<nb;j++){var c2=readCardRef(dv,o,false);o=c2.next;c2.direct=!!dv.getUint8(o++);atklist.push(c2)}
+  return {msg:10,player:player,activate:act,attack:atklist,toM2:!!dv.getUint8(o++),toEP:!!dv.getUint8(o++)};
+}
+
+function parseChain(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++),spe=dv.getUint8(o++),forced=!!dv.getUint8(o++);
+  var hintSelf=u32(dv,o);o+=4,hintOpp=u32(dv,o);o+=4,n=u32(dv,o);o+=4,chains=[];

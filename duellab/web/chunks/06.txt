@@ -1,0 +1,309 @@
+
+  for(var i=0;i<n;i++){
+    var code=u32(dv,o);o+=4,controller=dv.getUint8(o++),location=dv.getUint8(o++),sequence=u32(dv,o);o+=4;
+    var position=u32(dv,o);o+=4,description=u64num(dv,o);o+=8,clientMode=dv.getUint8(o++);
+    chains.push({code:code,controller:controller,location:location,sequence:sequence,position:position,description:description,clientMode:clientMode});
+  }
+  return {msg:16,player:player,speCount:spe,forced:forced,hintSelf:hintSelf,hintOpp:hintOpp,chains:chains,cancelable:!forced};
+}
+function parseSelectCards(pkt,msg){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++),cancelable=!!dv.getUint8(o++),min=u32(dv,o);o+=4,max=u32(dv,o);o+=4,n=u32(dv,o);o+=4,cards=[];
+  for(var i=0;i<n;i++){
+    var code=u32(dv,o);o+=4,controller=dv.getUint8(o++),location=dv.getUint8(o++);
+    var sequence=u32(dv,o);o+=4,position=0,release=0;
+    if(msg===15){position=u32(dv,o);o+=4}else{release=dv.getUint8(o++)}
+    cards.push({code:code,controller:controller,location:location,sequence:sequence,position:position,release:release});
+  }
+  return {msg:msg,player:player,cancelable:cancelable,min:min,max:max,cards:cards};
+}
+function parseOption(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1,player=dv.getUint8(o++),n=dv.getUint8(o++),options=[];
+  for(var i=0;i<n;i++){options.push(u64num(dv,o));o+=8}
+  return {msg:14,player:player,options:options};
+}
+function parsePlace(pkt,msg){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++),count=dv.getUint8(o++),flag=u32(dv,o);
+  return {msg:msg,player:player,count:count,flag:flag};
+}
+function placeResponseBytes(p){
+  var available=(~p.flag)>>>0,spots=[];
+  function addRange(base,controller,location,max){
+    for(var i=0;i<max;i++)if(available&(1<<(base+i)))spots.push([controller,location,i]);
+  }
+  addRange(0,0,4,7);addRange(8,0,8,8);addRange(16,1,4,7);addRange(24,1,8,8);
+  if(spots.length<p.count)throw Error('No legal field zone returned by OCGCore.');
+  var out=new Uint8Array(p.count*3);
+  for(var j=0;j<p.count;j++){out[j*3]=spots[j][0];out[j*3+1]=spots[j][1];out[j*3+2]=spots[j][2]}
+  return out;
+}
+function parseSelectUnselect(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++),finishable=!!dv.getUint8(o++),cancelable=!!dv.getUint8(o++);
+  var min=u32(dv,o);o+=4,max=u32(dv,o);o+=4;
+  function refs(){
+    var n=u32(dv,o);o+=4,a=[];
+    for(var i=0;i<n;i++){
+      var code=u32(dv,o);o+=4,controller=dv.getUint8(o++),location=dv.getUint8(o++);
+      var sequence=u32(dv,o);o+=4,position=u32(dv,o);o+=4;
+      a.push({code:code,controller:controller,location:location,sequence:sequence,position:position});
+    }
+    return a;
+  }
+  var select=refs(),unselect=refs();
+  return {msg:26,player:player,finishable:finishable,cancelable:cancelable,min:min,max:max,select:select,unselect:unselect,cards:select.concat(unselect)};
+}
+function respondUnselectIndex(index){
+  var a=new Uint8Array(8),dv=new DataView(a.buffer);dv.setInt32(0,1,true);dv.setInt32(4,index,true);
+  real.mod.set_response_bytes(real.duel,a);real.pending=null;
+}
+function parseCounter(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++),counterType=dv.getUint16(o,true);o+=2,count=dv.getUint16(o,true);o+=2,n=u32(dv,o);o+=4,cards=[];
+  for(var i=0;i<n;i++){
+    var code=u32(dv,o);o+=4,controller=dv.getUint8(o++),location=dv.getUint8(o++),sequence=dv.getUint8(o++),available=dv.getUint16(o,true);o+=2;
+    cards.push({code:code,controller:controller,location:location,sequence:sequence,available:available});
+  }
+  return {msg:22,player:player,counterType:counterType,count:count,cards:cards};
+}
+function respondCounter(p){
+  var remain=p.count,a=new Uint8Array(p.cards.length*2),dv=new DataView(a.buffer);
+  for(var i=0;i<p.cards.length;i++){var take=Math.min(remain,p.cards[i].available);dv.setUint16(i*2,take,true);remain-=take}
+  if(remain!==0)throw Error('Counter selection has insufficient counters.');
+  real.mod.set_response_bytes(real.duel,a);real.pending=null;
+}
+function parseSum(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var player=dv.getUint8(o++),mode=dv.getUint8(o++),acc=u32(dv,o);o+=4,min=u32(dv,o);o+=4,max=u32(dv,o);o+=4;
+  function refs(){
+    var n=u32(dv,o);o+=4,a=[];
+    for(var i=0;i<n;i++){
+      var code=u32(dv,o);o+=4,controller=dv.getUint8(o++),location=dv.getUint8(o++);
+      var sequence=u32(dv,o);o+=4,position=u32(dv,o);o+=4,param=u32(dv,o);o+=4;
+      a.push({code:code,controller:controller,location:location,sequence:sequence,position:position,param:param});
+    }
+    return a;
+  }
+  return {msg:23,player:player,mode:mode,acc:acc,min:min,max:max,must:refs(),cards:refs()};
+}
+function paramVals(p){var a=p&0xffff,b=(p>>>16)&0xffff;return b&&b!==a?[a,b]:[a]}
+function canExactParams(params,target){
+  var sums=new Set([0]);
+  params.forEach(function(p){var next=new Set();sums.forEach(function(s){paramVals(p).forEach(function(v){if(s+v<=target)next.add(s+v)})});sums=next});
+  return sums.has(target);
+}
+function findSumSelection(p){
+  var n=p.cards.length,must=p.must.map(function(x){return x.param});
+  if(p.max){
+    var min=Math.max(0,p.min),max=Math.min(p.max,n);
+    function rec(start,left,chosen){
+      if(left===0){return canExactParams(must.concat(chosen.map(function(i){return p.cards[i].param})),p.acc)?chosen.slice():null}
+      for(var i=start;i<=n-left;i++){chosen.push(i);var r=rec(i+1,left-1,chosen);if(r)return r;chosen.pop()}
+      return null;
+    }
+    for(var k=min;k<=max;k++){var r=rec(0,k,[]);if(r)return r}
+  }else{
+    var limit=Math.min(n,18);
+    for(var mask=0;mask<(1<<limit);mask++){
+      var chosen=[],params=must.slice();
+      for(var i=0;i<limit;i++)if(mask&(1<<i)){chosen.push(i);params.push(p.cards[i].param)}
+      if(chosen.length<p.min)continue;
+      var minSum=0,maxSum=0,minSingle=0x7fffffff;
+      params.forEach(function(pp){var vs=paramVals(pp),mn=Math.min.apply(null,vs),mx=Math.max.apply(null,vs);minSum+=mn;maxSum+=mx;minSingle=Math.min(minSingle,mn)});
+      if(maxSum>=p.acc && minSum-minSingle<p.acc)return chosen;
+    }
+  }
+  throw Error('No valid sum selection found.');
+}
+function parseSort(pkt,msg){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1,player=dv.getUint8(o++),n=u32(dv,o);o+=4,cards=[];
+  for(var i=0;i<n;i++){var code=u32(dv,o);o+=4,controller=dv.getUint8(o++),location=u32(dv,o);o+=4,sequence=u32(dv,o);o+=4;cards.push({code:code,controller:controller,location:location,sequence:sequence})}
+  return {msg:msg,player:player,cards:cards};
+}
+function respondSort(p){
+  var a=new Uint8Array(p.cards.length);for(var i=0;i<a.length;i++)a[i]=i;
+  real.mod.set_response_bytes(real.duel,a);real.pending=null;
+}
+
+function chooseHighest(list){
+  if(!list||!list.length)return -1;
+  var best=0,bv=-999999;
+  list.forEach(function(x,i){var a=atk(cardByCode(x.code));if(a>bv){bv=a;best=i}});
+  return best;
+}
+function respondInt(v){real.mod.set_response_i(real.duel,v);real.pending=null}
+function respondIndices(indices){
+  var a=new Uint8Array(8+indices.length*4),dv=new DataView(a.buffer);
+  dv.setInt32(0,0,true);dv.setUint32(4,indices.length,true);
+  indices.forEach(function(v,i){dv.setUint32(8+i*4,v,true)});
+  real.mod.set_response_bytes(real.duel,a);real.pending=null;
+}
+async function autoBotPrompt(p){
+  if(p.msg===11){
+    var ix=chooseHighest(p.summon);
+    if(ix>=0)respondInt((ix<<16)|0);
+    else if(p.toBP)respondInt(6);
+    else respondInt(7);
+  }else if(p.msg===10){
+    var ai=chooseHighest(p.attack);
+    if(ai>=0)respondInt((ai<<16)|1);
+    else if(p.toM2)respondInt(2);else respondInt(3);
+  }else if(p.msg===16)respondInt(p.forced&&p.chains.length?0:-1);
+  else if(p.msg===12||p.msg===13)respondInt(1);
+  else if(p.msg===14)respondInt(0);
+  else if(p.msg===18||p.msg===24){real.mod.set_response_bytes(real.duel,placeResponseBytes(p));real.pending=null}
+  else if(p.msg===19)respondInt(p.positions&1?1:p.positions&4?4:p.positions&8?8:2);
+  else if(p.msg===15||p.msg===20)respondIndices(Array.from({length:p.min||1},function(_,i){return i}));
+  else if(p.msg===21||p.msg===25)respondSort(p);
+  else if(p.msg===22)respondCounter(p);
+  else if(p.msg===23)respondIndices(findSumSelection(p));
+  else if(p.msg===26){if(p.cancelable||p.finishable)respondInt(-1);else respondUnselectIndex(0)}
+  else { log('<b>BOT:</b> prompt '+p.msg+' tratado com resposta neutra.'); respondInt(-1); }
+  real.pending=null;
+}
+function handlePacket(pkt){
+  if(!pkt.length)return null;
+  var msg=pkt[0],dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength);
+  try{
+    if(msg===2){log('<b>OCGCore:</b> invalid selection rejected; choose another legal command.');return {msg:2,player:0,retry:true}}
+    if(msg===11)return parseIdle(pkt);
+    if(msg===10)return parseBattle(pkt);
+    if(msg===12)return {msg:12,player:dv.getUint8(1),cancelable:false};
+    if(msg===13)return {msg:13,player:dv.getUint8(1),cancelable:false};
+    if(msg===14)return parseOption(pkt);
+    if(msg===15)return parseSelectCards(pkt,15);
+    if(msg===16)return parseChain(pkt);
+    if(msg===18||msg===24)return parsePlace(pkt,msg);
+    if(msg===19)return {msg:19,player:dv.getUint8(1),code:u32(dv,2),positions:dv.getUint8(6)};
+    if(msg===20)return parseSelectCards(pkt,20);
+    if(msg===21||msg===25)return parseSort(pkt,msg);
+    if(msg===22)return parseCounter(pkt);
+    if(msg===23)return parseSum(pkt);
+    if(msg===26)return parseSelectUnselect(pkt);
+    if(msg===50){mirrorMovePacket(pkt)}
+    else if(msg===90){
+      var pl=dv.getUint8(1),n=u32(dv,2),o2=6,codes=[];
+      for(var d=0;d<n&&o2+4<=pkt.length;d++){codes.push(u32(dv,o2));o2+=4}
+      mirrorDraw(pl,codes);log((pl===0?'You':'BOT')+' drew '+n+' card(s).');
+    }else if(msg===94){
+      var pl2=dv.getUint8(1),lp=u32(dv,2);if(pl2===0)state.playerLP=lp;else state.botLP=lp;render();
+    }else if(msg===91){
+      var pl3=dv.getUint8(1),dam=u32(dv,2);if(pl3===0)state.playerLP=Math.max(0,state.playerLP-dam);else state.botLP=Math.max(0,state.botLP-dam);render();
+    }else if(msg===92){
+      var pl4=dv.getUint8(1),rec=u32(dv,2);if(pl4===0)state.playerLP+=rec;else state.botLP+=rec;render();
+    }else if(msg===5){
+      var winner=dv.getUint8(1);log('<b>'+(winner===0?'YOU WIN!':'BOT SERTAO WINS!')+'</b>');real.active=false;real.pending=null;updatePromptUI();
+    }else if(msg===40){state.turn++;state.phase='DP';log('<b>Turn '+state.turn+'</b>')}
+    else if(msg===41){
+      var ph=dv.getUint16(1,true),map={1:'DP',2:'SP',4:'M1',8:'BP',16:'M2',32:'EP'};state.phase=map[ph]||state.phase;render();
+    }
+  }catch(e){console.error('packet '+msg,e);log('<b>UI packet error '+msg+':</b> '+String(e.message||e))}
+  return null;
+}
+function showUnselectPrompt(p){
+  choiceOverlay.hidden=false;choiceTitle.textContent='SELECT / UNSELECT CARD';choiceText.textContent='Choose a card.';
+  choiceCards.innerHTML='';choiceActions.innerHTML='';
+  p.cards.forEach(function(ref,idx){
+    var c=cardByCode(ref.code),b=document.createElement('button');b.className='stdl-choice-card';b.type='button';
+    var u=img(c);b.innerHTML=(u?'<img src="'+u+'" alt="">':'')+'<span>'+escapeHtml(cardName(c))+'</span>';
+    b.onclick=function(){respondUnselectIndex(idx);real.pending=null;closeChoice();pumpReal()};
+    choiceCards.appendChild(b);
+  });
+  if(p.cancelable||p.finishable)choiceButton(p.finishable?'FINISH':'CANCEL',function(){respondInt(-1);real.pending=null;closeChoice();pumpReal()},'primary');
+}
+function presentPlayerPrompt(p){
+  if(!p)return 'wait';
+  if(p.msg===12){showYesNoPrompt(p,'ACTIVATE THIS EFFECT?');return 'wait'}
+  if(p.msg===13){showYesNoPrompt(p,'CONFIRM');return 'wait'}
+  if(p.msg===14){showOptionPrompt(p);return 'wait'}
+  if(p.msg===15){showCardsPrompt(p,'SELECT CARD(S)');return 'wait'}
+  /* IMPORTANT V15: automatic answers MUST NOT call pumpReal() recursively.
+     While the current pump is active, the recursive call is ignored by
+     real.pumping and the duel used to stop here forever. We answer and
+     tell the same pump loop to continue instead. */
+  if(p.msg===18||p.msg===24){real.mod.set_response_bytes(real.duel,placeResponseBytes(p));real.pending=null;return 'continue'}
+  if(p.msg===19){showPositionPrompt(p);return 'wait'}
+  if(p.msg===20){showCardsPrompt(p,'SELECT TRIBUTE(S)');return 'wait'}
+  if(p.msg===21||p.msg===25){respondSort(p);real.pending=null;return 'continue'}
+  if(p.msg===22){respondCounter(p);real.pending=null;return 'continue'}
+  if(p.msg===23){respondIndices(findSumSelection(p));real.pending=null;return 'continue'}
+  if(p.msg===26){showUnselectPrompt(p);return 'wait'}
+  throw Error('Unsupported player prompt '+p.msg);
+}
+function updateRealButtons(){
+  updatePromptUI();
+  bindPiles();
+  attachCardSelection();
+  bindPiles();
+}
+async function pumpReal(){
+  if(!real.active)return;
+  if(real.pumping)return;real.pumping=true;
+  try{
+    var safety=0;
+    while(real.active&&safety++<240){
+      if(safety%40===0)await new Promise(function(resolve){setTimeout(resolve,0)});
+      var r=real.mod.process_duel(real.duel);
+      var bytes=new Uint8Array(r.message||[]),packets=splitPackets(bytes),prompt=null,retry=false;
+      packets.forEach(function(pkt){var p=handlePacket(pkt);if(p){if(p.retry)retry=true;else prompt=p}});
+      if(retry){
+        real.pending=null;
+        if((real.retryCount=(real.retryCount||0)+1)>5)throw Error('OCGCore rejected repeated selections. Restart the duel.');
+        continue;
+      }
+      real.retryCount=0;
+      if(prompt){
+        real.pending=prompt;updateRealButtons();
+        if(prompt.player===1){await autoBotPrompt(prompt);continue}
+        if(prompt.msg===16||prompt.msg===10||prompt.msg===11){
+          updatePromptUI();return;
+        }
+        var promptFlow=presentPlayerPrompt(prompt);
+        if(promptFlow==='continue'){updatePromptUI();continue}
+        return;
+      }
+      updateRealButtons();
+      if(Number(r.status)===0)return;
+    }
+    if(safety>=240)throw Error('Safety stop: core avançou demais sem solicitar decisão.');
+  }catch(e){
+    real.active=false;real.pending=null;closeChoice();updatePromptUI();
+    log('<b>OCGCore stopped:</b> '+String(e.message||e));
+    $('#realHelp').textContent='ERRO REAL: '+String(e.message||e);
+    console.error(e);
+  }finally{real.pumping=false}
+}
+var startRealBtn=$('#startRealBtn');if(startRealBtn)startRealBtn.onclick=startRealDuel;
+
+
+
+window.runDuelLabSelfTest=function(){
+  var failures=[];
+  try{
+    var mock={msg:11,player:0,summon:[{code:123,controller:0,location:2,sequence:0}],special:[],reposition:[],mset:[],sset:[],activate:[],toBP:true,toEP:true};
+    real.active=true;real.pending=mock;
+    var cmds=legalCommands({code:123,controller:0,location:2,sequence:0});
+    if(!cmds.some(function(x){return x.label==='NORMAL SUMMON'}))failures.push('normal summon command');
+    real.pending={msg:16,player:0,forced:false,chains:[{code:123,controller:0,location:2,sequence:0}]};
+    cmds=legalCommands({code:123,controller:0,location:2,sequence:0});
+    if(!cmds.some(function(x){return x.type==='chain'}))failures.push('chain command');
+    var fake=new Uint8Array([41,4,0]);handlePacket(fake);
+    if(state.phase!=='M1')failures.push('phase parser');
+    var place=placeResponseBytes({flag:0xfffffffe,count:1});
+    if(place.length!==3||place[1]!==4||place[2]!==0)failures.push('place response');
+    var sel=findSumSelection({cards:[{param:2},{param:3}],must:[],acc:5,min:2,max:2});
+    if(sel.length!==2)failures.push('sum solver');
+    closeChoice();hideCardMenu();
+  }catch(e){failures.push(String(e&&e.stack||e))}
+  real.active=false;real.pending=null;updatePromptUI();
+  return {ok:failures.length===0,failures:failures};
+};
+
+(async function init(){
+  await loadDB();
+  loadRealResources();
+  $('#engineStatus').textContent='Duel Lab pronto - execução local';
+  state.playerDeck=[];state.botDeck=[];state.playerHand=[];state.botHand=[];render();updatePromptUI();
+})();
+})();

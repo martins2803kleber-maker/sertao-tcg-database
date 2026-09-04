@@ -1,0 +1,159 @@
+  $('#botGyCount').textContent=(state.botGY||[]).length;
+  document.querySelectorAll('#phaseBar button').forEach(function(b){b.classList.toggle('active',b.dataset.phase===state.phase)});
+  attachCardPreviews();
+  attachCardSelection();
+  [['playerDeckPile',state.playerDeck,'DECK'],['playerExtraPile',state.playerExtra,'EXTRA'],['playerGyPile',state.playerGY,'GY'],
+   ['botDeckPile',state.botDeck,'DECK BOT'],['botExtraPile',state.botExtra,'EXTRA BOT'],['botGyPile',state.botGY,'GY BOT']].forEach(function(x){
+     var el=$('#'+x[0]); if(el) el.onclick=function(){toast(x[2]+' - '+x[1].length+' CARTAS')};
+   });
+}
+
+
+
+
+
+var cardMenu=$('#cardMenu');
+var choiceOverlay=$('#choiceOverlay');
+var choiceTitle=$('#choiceTitle'),choiceText=$('#choiceText'),choiceCards=$('#choiceCards'),choiceActions=$('#choiceActions');
+var duelHint=$('#duelHint'),passChainBtn=$('#passChainBtn');
+
+function allPlayerPools(){
+  return [state.playerHand,state.playerField,state.playerSpellField,state.playerExtra,state.playerGY,state.playerBanished];
+}
+function findPlayerCard(code){
+  code=Number(code);
+  for(var pool of allPlayerPools()){
+    var c=pool.find(function(x){return Number(x.id||x.originalId||x.baseId)===code});
+    if(c)return c;
+  }
+  return cardByCode(code);
+}
+function cardIdentityFromEl(el){
+  return {
+    code:Number(el&&el.dataset.cardCode||0),
+    controller:Number(el&&el.dataset.side||0),
+    location:Number(el&&el.dataset.location||0),
+    sequence:Number(el&&el.dataset.sequence||0)
+  };
+}
+function sameRef(a,b){
+  if(!a||!b)return false;
+  if(Number(a.code)!==Number(b.code))return false;
+  if(a.location!=null&&b.location!=null&&Number(a.location)!==Number(b.location))return false;
+  var loc=Number(a.location!=null?a.location:b.location);
+  if([1,2,16,32,64].indexOf(loc)>=0)return true;
+  return a.sequence==null||b.sequence==null||Number(a.sequence)===Number(b.sequence);
+}
+function pendingIndex(list,ref){
+  return (list||[]).findIndex(function(x){return sameRef(x,ref)});
+}
+function legalCommands(ref){
+  var p=real.active?real.pending:null,out=[];
+  if(!p||p.player!==0)return out;
+  if(p.msg===11){
+    var i;
+    if((i=pendingIndex(p.summon,ref))>=0)out.push({label:'NORMAL SUMMON',type:'idle',cmd:0,index:i});
+    if((i=pendingIndex(p.special,ref))>=0)out.push({label:'SPECIAL SUMMON',type:'idle',cmd:1,index:i});
+    if((i=pendingIndex(p.reposition,ref))>=0)out.push({label:'CHANGE POSITION',type:'idle',cmd:2,index:i});
+    if((i=pendingIndex(p.mset,ref))>=0)out.push({label:'SET MONSTER',type:'idle',cmd:3,index:i});
+    if((i=pendingIndex(p.sset,ref))>=0)out.push({label:'SET SPELL / TRAP',type:'idle',cmd:4,index:i});
+    (p.activate||[]).forEach(function(x,idx){if(sameRef(x,ref))out.push({label:'ACTIVATE EFFECT',type:'idle',cmd:5,index:idx,description:x.description})});
+  }else if(p.msg===10){
+    (p.activate||[]).forEach(function(x,idx){if(sameRef(x,ref))out.push({label:'ACTIVATE EFFECT',type:'battle',cmd:0,index:idx,description:x.description})});
+    var a=pendingIndex(p.attack,ref);if(a>=0)out.push({label:'ATTACK',type:'battle',cmd:1,index:a});
+  }else if(p.msg===16){
+    (p.chains||[]).forEach(function(x,idx){if(sameRef(x,ref))out.push({label:'CHAIN / ACTIVATE',type:'chain',index:idx,description:x.description})});
+  }
+  return out;
+}
+function hideCardMenu(){if(cardMenu)cardMenu.classList.remove('show')}
+function showCardMenu(ev,el){
+  ev.preventDefault();ev.stopPropagation();
+  var ref=cardIdentityFromEl(el),card=findPlayerCard(ref.code),cmds=legalCommands(ref);
+  if(card)showCardPreview(card);
+  cardMenu.innerHTML='<div class="menu-title">'+escapeHtml(cardName(card))+'</div>';
+  if(cmds.length){
+    var effectNo=0,effectTotal=cmds.filter(function(x){return /ACTIVATE|CHAIN/.test(x.label)}).length;
+    cmds.forEach(function(cmd){
+      var b=document.createElement('button');
+      var label=cmd.label;
+      if(/ACTIVATE|CHAIN/.test(label)&&effectTotal>1)label+=' '+(++effectNo);
+      b.textContent=label;
+      b.onclick=function(){hideCardMenu();executeCommand(cmd,ref)};
+      cardMenu.appendChild(b);
+    });
+  }else{
+    var none=document.createElement('button');none.className='secondary';none.textContent='NO LEGAL ACTION NOW';none.disabled=true;cardMenu.appendChild(none);
+  }
+  var view=document.createElement('button');view.className='secondary';view.textContent='VIEW CARD DETAILS';view.onclick=function(){hideCardMenu();if(card)showCardPreview(card)};cardMenu.appendChild(view);
+  cardMenu.style.left=Math.min(ev.clientX+8,window.innerWidth-210)+'px';
+  cardMenu.style.top=Math.min(ev.clientY+8,window.innerHeight-Math.min(320,cardMenu.scrollHeight+20))+'px';
+  cardMenu.classList.add('show');
+}
+function escapeHtml(s){return String(s||'').replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]})}
+async function executeCommand(cmd,ref){
+  if(!real.active||!real.pending)return;
+  real.lastCommand=cmd;
+  if(cmd.type==='idle')respondInt((cmd.index<<16)|cmd.cmd);
+  else if(cmd.type==='battle')respondInt((cmd.index<<16)|cmd.cmd);
+  else if(cmd.type==='chain')respondInt(cmd.index);
+  real.pending=null;updatePromptUI();await pumpReal();
+}
+function attachCardSelection(){
+  document.querySelectorAll('[data-card-code]').forEach(function(el){
+    el.onclick=function(e){
+      var ref=cardIdentityFromEl(el),c=(Number(el.dataset.side)===0?findPlayerCard(ref.code):cardByCode(ref.code));
+      if(c)showCardPreview(c);
+    };
+    el.oncontextmenu=function(e){
+      if(Number(el.dataset.side)!==0){e.preventDefault();var c=cardByCode(Number(el.dataset.cardCode));if(c)showCardPreview(c);return}
+      showCardMenu(e,el);
+    };
+  });
+}
+document.addEventListener('click',function(e){if(cardMenu&&!cardMenu.contains(e.target))hideCardMenu()});
+document.addEventListener('contextmenu',function(e){
+  if(e.target.closest('.stdl-app')&&!e.target.closest('[data-card-code]'))hideCardMenu();
+});
+
+function closeChoice(){choiceOverlay.hidden=true;choiceCards.innerHTML='';choiceActions.innerHTML='';choiceText.textContent=''}
+function choiceButton(label,fn,cls){
+  var b=document.createElement('button');b.textContent=label;if(cls)b.className=cls;b.onclick=fn;choiceActions.appendChild(b);return b;
+}
+$('#choiceCloseBtn').onclick=function(){
+  var p=real.pending;
+  if(p&&p.player===0&&p.cancelable){respondInt(-1);real.pending=null;closeChoice();pumpReal()}
+};
+function showYesNoPrompt(p,title){
+  choiceOverlay.hidden=false;choiceTitle.textContent=title||'CONFIRM';choiceText.textContent='Choose an option.';
+  choiceCards.innerHTML='';choiceActions.innerHTML='';
+  choiceButton('NO',function(){respondInt(0);real.pending=null;closeChoice();pumpReal()});
+  choiceButton('YES',function(){respondInt(1);real.pending=null;closeChoice();pumpReal()},'primary');
+}
+function showOptionPrompt(p){
+  choiceOverlay.hidden=false;choiceTitle.textContent='SELECT OPTION';choiceText.textContent='Choose one of the options requested by the effect.';
+  choiceCards.innerHTML='';choiceActions.innerHTML='';
+  (p.options||[]).forEach(function(v,i){choiceButton('OPTION '+(i+1),function(){respondInt(i);real.pending=null;closeChoice();pumpReal()},i===0?'primary':'')});
+}
+function showPositionPrompt(p){
+  choiceOverlay.hidden=false;choiceTitle.textContent='SELECT BATTLE POSITION';choiceText.textContent='';
+  choiceCards.innerHTML='';choiceActions.innerHTML='';
+  [[1,'FACE-UP ATTACK'],[4,'FACE-UP DEFENSE'],[8,'FACE-DOWN DEFENSE'],[2,'FACE-DOWN ATTACK']].forEach(function(x){
+    if(p.positions&x[0])choiceButton(x[1],function(){respondInt(x[0]);real.pending=null;closeChoice();pumpReal()},'primary');
+  });
+}
+function showCardsPrompt(p,title){
+  choiceOverlay.hidden=false;choiceTitle.textContent=title||'SELECT CARD';choiceText.textContent='Select '+p.min+(p.max!==p.min?' to '+p.max:'')+' card(s).';
+  choiceCards.innerHTML='';choiceActions.innerHTML='';var selected=[];
+  (p.cards||[]).forEach(function(ref,idx){
+    var c=cardByCode(ref.code),b=document.createElement('button');b.className='stdl-choice-card';b.type='button';
+    var u=img(c);b.innerHTML=(u?'<img src="'+u+'" alt="">':'')+'<span>'+escapeHtml(cardName(c))+'</span>';
+    b.onclick=function(){
+      var pos=selected.indexOf(idx);
+      if(pos>=0){selected.splice(pos,1);b.classList.remove('selected')}
+      else if(selected.length<p.max){selected.push(idx);b.classList.add('selected')}
+      confirm.disabled=selected.length<p.min||selected.length>p.max;
+    };
+    choiceCards.appendChild(b);
+  });
+  if(p.cancelable)choiceButton('CANCEL',f
