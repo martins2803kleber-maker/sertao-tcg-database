@@ -1,0 +1,42 @@
+name: Sync Duel Lab CardScripts
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 4 * * *'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/sync-card-scripts.yml'
+      - 'scripts/build-card-bundles.mjs'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: duellab-cardscripts-sync
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Duel Lab
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - name: Clone Project Ignis CardScripts
+        run: git clone --depth 1 https://github.com/ProjectIgnis/CardScripts.git /tmp/cardscripts
+      - name: Build local script bundles
+        run: node scripts/build-card-bundles.mjs /tmp/cardscripts duellab/web/cardscripts
+      - name: Commit bundles when changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add duellab/web/cardscripts
+          if git diff --cached --quiet; then
+            echo "CardScripts already up to date"
+            exit 0
+          fi
+          git commit -m "Atualiza CardScripts locais do Duel Lab"
+          git push
