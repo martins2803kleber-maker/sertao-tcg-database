@@ -11,13 +11,12 @@
       source+=await response.text();
     }
 
-    // Cloudflare serves duellab/web as the site root. The OCGCore/WASM and
-    // core data live outside that directory in the repository, so relative
-    // ../../assets URLs cannot exist in the deployed static site. Load those
-    // versioned public assets from the repository CDN instead.
+    // Cloudflare serves duellab/web as the site root. OCGCore/WASM and its
+    // data live in assets/duellab outside that root, so load the exact GitHub
+    // revision through jsDelivr. Pinning the commit avoids @main CDN lag.
     source=source.replace(
       "var REAL_BASE='../../assets/duellab/';",
-      "var REAL_BASE='https://cdn.jsdelivr.net/gh/martins2803kleber-maker/sertao-tcg-database@main/assets/duellab/';"
+      "var REAL_BASE='https://cdn.jsdelivr.net/gh/martins2803kleber-maker/sertao-tcg-database@6d321c117c77f000a78274fb8c72c1a727f9533c/assets/duellab/';"
     );
 
     new Function(source+'\n//# sourceURL=duellab-runtime.js')();
