@@ -7,6 +7,55 @@
 <title>Duel Lab — SertãoTCG | OCGCore Web</title>
 <link rel="stylesheet" href="./styles.css">
 <link rel="stylesheet" href="./edopro-theme.css">
+<style id="duellab-v18-fixes">
+/* V18: proporcoes do campo e leitura visual no estilo de cliente desktop */
+.stdl-field{gap:7px!important;padding:9px 12px!important}
+.stdl-board-line{grid-template-columns:72px minmax(0,1fr) 72px!important;gap:9px!important;overflow:visible!important}
+.stdl-row{grid-template-columns:repeat(5,minmax(48px,96px))!important;justify-content:center!important;align-items:center!important;gap:10px!important;width:100%!important;max-width:none!important}
+.stdl-zone{width:100%!important;max-width:96px!important;aspect-ratio:59/86!important;border-width:2px!important;overflow:hidden!important}
+#playerMonsters .stdl-zone,#playerSpell .stdl-zone{border-color:rgba(69,162,188,.92)!important;background:linear-gradient(rgba(20,80,76,.34),rgba(4,25,25,.78))!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.95),inset 0 0 22px rgba(45,156,154,.18),0 0 7px rgba(39,145,165,.08)!important}
+#botMonsters .stdl-zone,#botSpell .stdl-zone{border-color:rgba(177,72,82,.92)!important;background:linear-gradient(rgba(98,30,38,.34),rgba(30,5,10,.80))!important;box-shadow:inset 0 0 0 1px rgba(0,0,0,.95),inset 0 0 22px rgba(177,61,77,.17),0 0 7px rgba(167,47,61,.08)!important}
+.stdl-emz-band{width:min(620px,calc(100% - 180px))!important;max-width:none!important;grid-template-columns:repeat(5,minmax(48px,96px))!important;justify-content:center!important;gap:10px!important;min-height:96px!important;margin:0 auto!important}
+.stdl-emz-band .stdl-emz-zone{max-width:96px!important;width:100%!important;border:2px solid rgba(83,163,196,.98)!important;background:linear-gradient(rgba(25,89,108,.40),rgba(5,28,38,.83))!important;box-shadow:inset 0 0 0 1px #000,0 0 12px rgba(55,154,194,.18)!important}
+.stdl-zone-label{font-size:7px!important;letter-spacing:.3px!important;color:#acc2c0!important;background:rgba(0,0,0,.30)!important;padding:2px 4px!important;border:1px solid rgba(255,255,255,.06)!important}
+.stdl-pzone-left{border-left:3px solid #4c99e6!important}.stdl-pzone-right{border-right:3px solid #df547d!important}
+.stdl-static-zone{border-width:2px!important}.stdl-field-zone{box-shadow:inset 0 0 18px rgba(72,163,116,.14)!important}
+.stdl-phasebar{margin:1px 0!important}.stdl-phasebar button{transition:.12s!important}.stdl-phasebar button:hover{filter:brightness(1.22)!important;border-color:#86afc5!important}
+.stdl-phasebar button.active{outline:1px solid rgba(184,224,246,.36)!important}
+.stdl-hand-wrap{min-height:124px!important}.stdl-hand{min-height:108px!important;max-height:122px!important}
+.stdl-hand-card{width:62px!important;flex-basis:62px!important}.stdl-hand-card:hover{z-index:30!important}
+
+/* Tela cheia: o tabuleiro inteiro cabe no viewport, sem empilhar o painel abaixo. */
+.stdl-app:fullscreen,.stdl-app:-webkit-full-screen{width:100vw!important;height:100vh!important;min-height:0!important;overflow:hidden!important;display:grid!important;grid-template-rows:42px minmax(0,1fr)!important;background:#020506!important}
+.stdl-app:fullscreen .stdl-top,.stdl-app:-webkit-full-screen .stdl-top{height:42px!important;min-height:42px!important}
+.stdl-app:fullscreen .stdl-layout,.stdl-app:-webkit-full-screen .stdl-layout{display:block!important;height:100%!important;min-height:0!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-main,.stdl-app:-webkit-full-screen .stdl-main{height:100%!important;min-height:0!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-side,.stdl-app:-webkit-full-screen .stdl-side{display:none!important}
+.stdl-app:fullscreen .stdl-arena,.stdl-app:-webkit-full-screen .stdl-arena{height:100%!important;min-height:0!important;display:grid!important;grid-template-rows:42px minmax(0,1fr) 112px 42px 31px!important;padding-right:245px!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-field,.stdl-app:-webkit-full-screen .stdl-field{min-height:0!important;height:100%!important;display:grid!important;grid-template-rows:minmax(0,1fr) minmax(0,1fr) minmax(58px,.72fr) 29px minmax(0,1fr) minmax(0,1fr)!important;gap:3px!important;padding:5px 8px!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-board-line,.stdl-app:-webkit-full-screen .stdl-board-line{height:100%!important;min-height:0!important;grid-template-columns:58px minmax(0,1fr) 58px!important;gap:6px!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-row,.stdl-app:-webkit-full-screen .stdl-row{height:100%!important;min-height:0!important;grid-template-columns:repeat(5,minmax(42px,78px))!important;gap:7px!important;align-items:center!important}
+.stdl-app:fullscreen .stdl-zone,.stdl-app:-webkit-full-screen .stdl-zone{width:auto!important;height:min(100%,114px)!important;max-width:78px!important;aspect-ratio:59/86!important;justify-self:center!important}
+.stdl-app:fullscreen .stdl-side-stack,.stdl-app:-webkit-full-screen .stdl-side-stack{min-height:0!important;height:100%!important;gap:3px!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-pile,.stdl-app:-webkit-full-screen .stdl-pile,.stdl-app:fullscreen .stdl-static-zone,.stdl-app:-webkit-full-screen .stdl-static-zone{min-height:0!important;height:100%!important}
+.stdl-app:fullscreen .stdl-mini-pile,.stdl-app:-webkit-full-screen .stdl-mini-pile{min-height:20px!important;height:20px!important}
+.stdl-app:fullscreen .stdl-emz-band,.stdl-app:-webkit-full-screen .stdl-emz-band{height:100%!important;min-height:0!important;width:min(520px,calc(100% - 130px))!important;grid-template-columns:repeat(5,minmax(42px,78px))!important;gap:7px!important;align-items:center!important}
+.stdl-app:fullscreen .stdl-emz-band .stdl-emz-zone,.stdl-app:-webkit-full-screen .stdl-emz-band .stdl-emz-zone{height:min(100%,96px)!important;max-width:78px!important}
+.stdl-app:fullscreen .stdl-hand-wrap,.stdl-app:-webkit-full-screen .stdl-hand-wrap{min-height:0!important;height:112px!important;padding:3px 7px 5px!important;overflow:hidden!important}
+.stdl-app:fullscreen .stdl-hand,.stdl-app:-webkit-full-screen .stdl-hand{height:94px!important;min-height:0!important;max-height:94px!important;overflow-y:hidden!important}
+.stdl-app:fullscreen .stdl-hand-card,.stdl-app:-webkit-full-screen .stdl-hand-card{width:56px!important;flex-basis:56px!important}
+.stdl-app:fullscreen .stdl-card-preview,.stdl-app:-webkit-full-screen .stdl-card-preview{display:block!important;position:absolute!important;right:0!important;top:42px!important;bottom:31px!important;width:245px!important;z-index:20!important;padding:7px!important;background:linear-gradient(#121b1f,#05090b)!important;border-left:1px solid #536168!important;overflow:auto!important}
+.stdl-app:fullscreen .stdl-card-preview-image-wrap,.stdl-app:-webkit-full-screen .stdl-card-preview-image-wrap{width:132px!important;max-height:193px!important}
+.stdl-app:fullscreen .stdl-card-preview-image,.stdl-app:-webkit-full-screen .stdl-card-preview-image{max-width:132px!important;max-height:193px!important}
+.stdl-app:fullscreen .stdl-duel-hintbar,.stdl-app:-webkit-full-screen .stdl-duel-hintbar{height:31px!important;min-height:31px!important;padding:3px 7px!important}
+
+@media(max-width:900px){
+  .stdl-row{grid-template-columns:repeat(5,minmax(34px,70px))!important;gap:4px!important}
+  .stdl-zone{max-width:70px!important}.stdl-board-line{grid-template-columns:46px minmax(0,1fr) 46px!important;gap:4px!important}
+  .stdl-emz-band{grid-template-columns:repeat(5,minmax(34px,70px))!important;gap:4px!important;width:calc(100% - 110px)!important}
+  .stdl-emz-band .stdl-emz-zone{max-width:70px!important}
+}
+</style>
 </head>
 <body>
 <div class="stdl-app">
