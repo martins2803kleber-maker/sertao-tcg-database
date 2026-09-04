@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# Builds the browser-optimized mirrors used by search, filters, decklists and Deck Builder.
 from __future__ import annotations
 import hashlib, json, re, shutil
 from pathlib import Path
