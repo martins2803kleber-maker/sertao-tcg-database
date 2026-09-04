@@ -1,105 +1,149 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="theme-color" content="#0d1017" />
-  <meta name="description" content="Duel Lab — ferramentas, cartas e testes de deck do SertãoTCG." />
-  <title>Duel Lab — SertãoTCG</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css" />
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Duel Lab — SertãoTCG | EDOPro Web</title>
+<link rel="stylesheet" href="./styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <a class="brand" href="#inicio" aria-label="Duel Lab">
-      <span class="brand-mark">DL</span>
-      <span><strong>Duel Lab</strong><small>by SertãoTCG</small></span>
-    </a>
-    <nav class="nav" aria-label="Navegação principal">
-      <a href="#jogos">Jogos</a>
-      <a href="#ferramentas">Ferramentas</a>
-      <a href="#sobre">Sobre</a>
-    </nav>
-    <a class="community-link" href="https://tcgsertao.blogspot.com/" target="_blank" rel="noopener">SertãoTCG ↗</a>
+<div class="stdl-app">
+  <header class="stdl-top">
+    <div class="stdl-brand">DUEL <span>LAB</span> <small style="color:#8799a4;font-size:8px">by SertãoTCG</small></div>
+    <div class="stdl-badge">EDOPRO WEB / OCGCORE</div>
+    <div class="stdl-status" id="engineStatus">Inicializando...</div>
+    <button class="stdl-fullscreen-btn" id="fullscreenBtn" type="button" title="Tela cheia">
+      <span class="stdl-fullscreen-icon">[ ]</span>
+      <span class="stdl-fullscreen-text">TELA CHEIA</span>
+    </button>
   </header>
+  <div class="stdl-layout">
+    <main class="stdl-main">
+      <div class="stdl-arena">
+        <div class="stdl-opponent">
+          <div class="stdl-avatar">B</div>
+          <div class="stdl-meta"><strong>BOT SERTÃO</strong><small>Deck da Casa</small></div>
+          <div class="stdl-lp"><span id="botLP">8000</span> LP</div>
+        </div>
 
-  <main id="inicio">
-    <section class="hero">
-      <div class="hero-copy">
-        <p class="eyebrow">LABORATÓRIO DE TCG</p>
-        <h1>Construa. Teste.<br><span>Refine seu deck.</span></h1>
-        <p class="hero-text">Um espaço dedicado às ferramentas do SertãoTCG. Pesquise cartas, monte listas, teste ideias e acompanhe os recursos que estamos desenvolvendo.</p>
-        <div class="hero-actions">
-          <a class="btn primary" href="#jogos">Escolher jogo</a>
-          <a class="btn secondary" href="#ferramentas">Ver ferramentas</a>
+        <section class="stdl-field">
+          <div class="stdl-board-line">
+            <div class="stdl-pile bot-pile" id="botExtraPile"><b>EXTRA</b><span id="botExtraCount">0</span></div>
+            <div class="stdl-row" id="botSpell"></div>
+            <div class="stdl-pile bot-pile" id="botDeckPile"><b>DECK</b><span id="botDeckCount">0</span></div>
+          </div>
+          <div class="stdl-board-line">
+            <div class="stdl-pile bot-pile" id="botBanishedPile"><b>BAN</b><span>0</span></div>
+            <div class="stdl-row" id="botMonsters"></div>
+            <div class="stdl-pile bot-pile" id="botGyPile"><b>GY</b><span id="botGyCount">0</span></div>
+          </div>
+          <div class="stdl-phasebar" id="phaseBar">
+            <button data-phase="DP">DP</button><button data-phase="SP">SP</button>
+            <button data-phase="M1" class="active">M1</button><button data-phase="BP">BP</button>
+            <button data-phase="M2">M2</button><button data-phase="EP">EP</button>
+          </div>
+          <div class="stdl-board-line">
+            <div class="stdl-pile player-pile" id="playerGyPile"><b>GY</b><span id="playerGyCount">0</span></div>
+            <div class="stdl-row" id="playerMonsters"></div>
+            <div class="stdl-pile player-pile" id="playerBanishedPile"><b>BAN</b><span>0</span></div>
+          </div>
+          <div class="stdl-board-line">
+            <div class="stdl-pile player-pile" id="playerDeckPile"><b>DECK</b><span id="playerDeckCount">0</span></div>
+            <div class="stdl-row" id="playerSpell"></div>
+            <div class="stdl-pile player-pile" id="playerExtraPile"><b>EXTRA</b><span id="playerExtraCount">0</span></div>
+          </div>
+        </section>
+
+        <div class="stdl-hand-wrap">
+          <div class="stdl-hand-label">SUA MÃO</div>
+          <div class="stdl-hand" id="playerHand"></div>
+        </div>
+
+        <div class="stdl-player">
+          <div class="stdl-avatar">S</div>
+          <div class="stdl-meta"><strong>VOCÊ</strong><small id="deckLabel">Deck de teste</small></div>
+          <div class="stdl-lp"><span id="playerLP">8000</span> LP</div>
+        </div>
+
+        <aside class="stdl-card-preview" id="cardPreview">
+          <div class="stdl-card-preview-empty">
+            <strong>CARD DETAILS</strong>
+            <span>Hover a card to view its image, stats and effect text.</span>
+          </div>
+          <div class="stdl-card-preview-content" hidden>
+            <div class="stdl-card-preview-image-wrap">
+              <img class="stdl-card-preview-image" alt="">
+            </div>
+            <div class="stdl-card-preview-info">
+              <span class="stdl-card-preview-type"></span>
+              <h3 class="stdl-card-preview-name"></h3>
+              <div class="stdl-card-preview-stats"></div>
+              <div class="stdl-card-preview-effect"></div>
+            </div>
+          </div>
+        </aside>
+        <div class="stdl-duel-hintbar">
+          <span id="duelHint">Clique com o botão direito em uma carta para ver as ações disponíveis.</span>
+          <button id="passChainBtn" type="button" hidden>NAO ATIVAR / PASSAR</button>
         </div>
       </div>
-      <div class="lab-panel" aria-hidden="true">
-        <div class="lab-grid"></div>
-        <div class="lab-card card-a"><span>01</span><b>DECK</b><small>BUILD</small></div>
-        <div class="lab-card card-b"><span>02</span><b>TEST</b><small>SIMULATE</small></div>
-        <div class="lab-card card-c"><span>03</span><b>DATA</b><small>ANALYZE</small></div>
-        <div class="pulse"></div>
-      </div>
-    </section>
+    </main>
 
-    <section id="jogos" class="section">
-      <div class="section-heading">
-        <p class="eyebrow">BASE DE CARTAS</p>
-        <h2>Escolha seu jogo</h2>
-        <p>Os bancos já existentes continuam separados da interface e podem ser atualizados sem precisar refazer o Duel Lab.</p>
-      </div>
+    <aside class="stdl-side">
+      <button class="stdl-tools-toggle" id="toolsToggle" type="button">
+        <span>OPÇÕES DO DUEL LAB</span>
+        <span id="toolsToggleIcon">+</span>
+      </button>
 
-      <div class="games">
-        <button class="game-card active" data-game="onepiece" type="button">
-          <span class="game-index">01</span>
-          <div><h3>One Piece Card Game</h3><p>Banco conectado</p></div>
-          <span class="status">ATIVO</span>
-        </button>
-        <button class="game-card" data-game="pokemon" type="button">
-          <span class="game-index">02</span>
-          <div><h3>Pokémon TCG</h3><p>Banco conectado</p></div>
-          <span class="status">ATIVO</span>
-        </button>
-        <button class="game-card" data-game="yugioh" type="button">
-          <span class="game-index">03</span>
-          <div><h3>Yu-Gi-Oh!</h3><p>Banco conectado</p></div>
-          <span class="status">ATIVO</span>
-        </button>
-      </div>
-
-      <div class="game-workspace">
-        <div>
-          <p class="workspace-label">JOGO SELECIONADO</p>
-          <h3 id="selectedGame">One Piece Card Game</h3>
-          <p id="selectedDescription">Pronto para receber busca de cartas, deck builder e o simulador do Duel Lab.</p>
+      <div class="stdl-tools" id="duelTools">
+        <div class="stdl-box">
+          <h3>Duel Lab</h3>
+          <p>Duel Lab com OCGCore real e scripts Project Ignis carregados sob demanda. Interface inspirada no fluxo do EDOPro para navegador.</p>
+          <div class="stdl-engine">
+            <span class="stdl-pill" id="realPill">OCGCORE: carregando</span>
+            <span class="stdl-pill" id="dbPill">BANCO: carregando</span>
+          </div>
         </div>
-        <button class="btn primary" id="openLab" type="button">Abrir laboratório</button>
-      </div>
-    </section>
 
-    <section id="ferramentas" class="section tools-section">
-      <div class="section-heading">
-        <p class="eyebrow">FERRAMENTAS</p>
-        <h2>O que vai morar aqui</h2>
-      </div>
-      <div class="tools-grid">
-        <article class="tool"><span>01</span><h3>Busca de cartas</h3><p>Pesquisa rápida por nome, código, coleção e outros filtros.</p></article>
-        <article class="tool"><span>02</span><h3>Deck Builder</h3><p>Monte e edite listas sem depender do Blogger.</p></article>
-        <article class="tool"><span>03</span><h3>Duel Lab</h3><p>Área de testes para os scripts e mecânicas do simulador.</p></article>
-        <article class="tool"><span>04</span><h3>Decks da comunidade</h3><p>Integração com as decklists enviadas pela comunidade.</p></article>
-      </div>
-    </section>
+        <div class="stdl-box">
+          <label>BOT / DECK DA CASA</label>
+          <select id="botDeck">
+            <option value="blueeyes">Blue-Eyes (demo)</option>
+            <option value="random">Aleatório (demo)</option>
+          </select>
+        </div>
 
-    <section id="sobre" class="section footer-section">
-      <div><p class="eyebrow">SERTÃOTCG</p><h2>Comunidade de um lado.<br>Ferramentas do outro.</h2></div>
-      <p>O site principal continua focado em conteúdo e comunidade. O Duel Lab passa a ser a aplicação independente para cartas, decks e testes.</p>
-    </section>
-  </main>
+        <div class="stdl-box">
+          <label>SEU DECK - YDKE</label>
+          <textarea id="ydkeInput" placeholder="Cole aqui um código ydke://..."></textarea>
+          <button id="startRealBtn" type="button" style="width:100%;margin-top:7px;background:#6f2b91;border-color:#8e42b1">INICIAR / REINICIAR DUELO</button>
+          <div id="realHelp" style="margin-top:6px;color:#91a6b2;font-size:8px;line-height:1.45">
+            Cole um YDKE completo, escolha o bot e inicie o duelo.
+          </div>
+        </div>
 
-  <footer><span>Duel Lab</span><span>by SertãoTCG</span></footer>
-  <script src="./app.js"></script>
+        <div class="stdl-box">
+          <label>LOG DO DUELO</label>
+          <div class="stdl-log" id="duelLog"></div>
+        </div>
+      </div>
+    </aside>
+  </div>
+</div>
+<div class="stdl-toast" id="toast"></div>
+<div class="stdl-overlay" id="choiceOverlay" hidden>
+  <div class="stdl-choice-panel">
+    <div class="stdl-choice-head">
+      <strong id="choiceTitle">SELECIONE</strong>
+      <button id="choiceCloseBtn" type="button">X</button>
+    </div>
+    <div class="stdl-choice-text" id="choiceText"></div>
+    <div class="stdl-choice-cards" id="choiceCards"></div>
+    <div class="stdl-choice-actions" id="choiceActions"></div>
+  </div>
+</div>
+<div class="stdl-card-menu" id="cardMenu"></div>
+
+<script src="./app.js"></script>
 </body>
 </html>
