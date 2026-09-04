@@ -1,0 +1,206 @@
+arr.push(pool[Math.floor(Math.random()*pool.length)]);
+  return shuffle(arr);
+}
+
+function botHouseDeck(){
+  if($('#botDeck').value==='random')return demoDeck();
+  var names=[
+    'Blue-Eyes White Dragon','Sage with Eyes of Blue','The White Stone of Ancients',
+    'Blue-Eyes Alternative White Dragon','Dragon Spirit of White','Dictator of D.',
+    'Maiden with Eyes of Blue','Nebula Dragon','Chaos Dragon Levianeer'
+  ];
+  var found=[];
+  names.forEach(function(n){
+    var c=state.db.find(function(x){return String(x.name||'').toLowerCase()===n.toLowerCase()});
+    if(c)for(var i=0;i<4;i++)found.push(c);
+  });
+  while(found.length<40){var d=demoDeck();found.push(d[found.length%d.length])}
+  var deck=found.slice(0,40);
+  /* Garante uma base jogável para o BOT demonstrativo. */
+  var monsterPool=state.db.filter(isMonster).filter(function(c){return atk(c)>=1000});
+  var monsterCount=deck.filter(isMonster).length;
+  while(monsterCount<18 && monsterPool.length){
+    deck[deck.length-1-monsterCount]=monsterPool[Math.floor(Math.random()*monsterPool.length)];
+    monsterCount++;
+  }
+  return shuffle(deck);
+}
+
+function resetDuel(){
+  state.playerLP=8000;state.botLP=8000;state.turn=1;state.playerTurn=true;state.normalUsed=false;
+  state.playerField=[];state.botField=[];state.playerHand=[];state.botHand=[];
+  if(!state.playerDeck.length)state.playerDeck=demoDeck();
+  state.botDeck=botHouseDeck();
+  state.playerDeck=shuffle(state.playerDeck.slice());
+  state.botDeck=shuffle(state.botDeck.slice());
+  for(var i=0;i<5;i++){draw('player',false);draw('bot',false)}
+  logEl.innerHTML='';
+  log('<b>Duel Lab:</b> novo duelo iniciado.');
+  log('Você começa. <b>Modo Demo</b>: regras simplificadas para provar a interface e o bot local.');
+  log('BOT Sertão está configurado para priorizar Invocação Normal antes de atacar.');
+  render();
+}
+
+function draw(side, announce){
+  var deck=side==='player'?state.playerDeck:state.botDeck;
+  var hand=side==='player'?state.playerHand:state.botHand;
+  if(!deck.length)return;
+  var c=deck.shift();hand.push(c);
+  if(announce!==false)log((side==='player'?'Você':'BOT')+' comprou uma carta.');
+}
+
+function bestMonster(hand){
+  var choices=hand.map(function(c,i){return {c:c,i:i}}).filter(function(x){return isMonster(x.c)});
+  choices.sort(function(a,b){return atk(b.c)-atk(a.c)});
+  return choices[0]||null;
+}
+
+function summon(side){
+  var hand=side==='player'?state.playerHand:state.botHand;
+  var field=side==='player'?state.playerField:state.botField;
+  if(field.length>=5)return false;
+  var pick=bestMonster(hand); if(!pick)return false;
+  hand.splice(pick.i,1);field.push(pick.c);
+  log((side==='player'?'Você':'BOT')+' invocou <b>'+cardName(pick.c)+'</b> ('+atk(pick.c)+' ATK).');
+  return true;
+}
+
+function attack(side){
+  var mine=side==='player'?state.playerField:state.botField;
+  var opp=side==='player'?state.botField:state.playerField;
+  if(!mine.length)return false;
+  var a=mine.slice().sort(function(x,y){return atk(y)-atk(x)})[0];
+  if(opp.length){
+    var d=opp.slice().sort(function(x,y){return atk(x)-atk(y)})[0];
+    var diff=atk(a)-atk(d);
+    log((side==='player'?'Você':'BOT')+' atacou <b>'+cardName(d)+'</b> com <b>'+cardName(a)+'</b>.');
+    if(diff>0){
+      var idx=opp.indexOf(d);opp.splice(idx,1);
+      if(side==='player')state.botLP=Math.max(0,state.botLP-diff);else state.playerLP=Math.max(0,state.playerLP-diff);
+      log('Monstro destruído. Dano: <b>'+diff+'</b>.');
+    }else if(diff<0){
+      if(side==='player')state.playerLP=Math.max(0,state.playerLP+diff);else state.botLP=Math.max(0,state.botLP+diff);
+      var mi=mine.indexOf(a);mine.splice(mi,1);
+      log('Atacante destruído. Dano: <b>'+Math.abs(diff)+'</b>.');
+    }else{
+      opp.splice(opp.indexOf(d),1);mine.splice(mine.indexOf(a),1);
+      log('Os dois monstros foram destruídos.');
+    }
+  }else{
+    var damage=atk(a);
+    if(side==='player')state.botLP=Math.max(0,state.botLP-damage);else state.playerLP=Math.max(0,state.playerLP-damage);
+    log((side==='player'?'Você':'BOT')+' atacou diretamente por <b>'+damage+'</b>.');
+  }
+  checkWin();render();return true;
+}
+
+function botTurn(){
+  if(state.playerLP<=0||state.botLP<=0)return;
+
+  state.playerTurn=false;
+  state.normalUsed=false;
+  state.turn++;
+  log('<b>Turno '+state.turn+': BOT Sertão</b>');
+
+  draw('bot');
+
+  /* No modo demo, o BOT prioriza colocar um monstro no campo.
+     Se não vier monstro na mão, compra cartas extras até 3 tentativas. */
+  var summoned=summon('bot');
+  var tries=0;
+  while(!summoned && tries<3 && state.botDeck.length){
+    draw('bot',false);
+    tries++;
+    summoned=summon('bot');
+  }
+
+  if(!summoned){
+    log('BOT não encontrou um monstro para invocar neste turno.');
+  }
+
+  render();
+
+  setTimeout(function(){
+    if(state.botField.length){
+      attack('bot');
+    }else{
+      log('BOT encerrou a Fase de Batalha sem monstros.');
+    }
+
+    setTimeout(function(){
+      state.playerTurn=true;
+      state.turn++;
+      state.normalUsed=false;
+      log('<b>Turno '+state.turn+': Você</b>');
+      draw('player');
+      render();
+    },450);
+  },550);
+}
+
+function checkWin(){
+  if(state.botLP<=0){log('<b>Você venceu!</b>');toast('VOCÊ VENCEU')}
+  if(state.playerLP<=0){log('<b>BOT Sertão venceu!</b>');toast('BOT SERTÃO VENCEU')}
+}
+
+function zoneHtml(c,label){
+  if(!c)return '<div class="stdl-zone">'+label+'</div>';
+  var u=img(c);
+  var key=previewKey(c);
+  state.previewMap.set(key,c);
+  if(!u)return '<div class="stdl-zone monster occupied" data-preview-key="'+key.replace(/"/g,'')+'"><div class="stdl-card-fit-fallback">'+cardName(c)+'</div><span class="stdl-atk">'+atk(c)+'</span></div>';
+  return '<div class="stdl-zone monster occupied" data-preview-key="'+key.replace(/"/g,'')+'" data-card-code="'+String(c.id||c.originalId||c.baseId||'')+'"><div class="stdl-card-fit"><img alt="" src="'+u+'" onerror="this.style.display=\'none\'"></div><span class="stdl-atk">'+atk(c)+'</span></div>';
+}
+function renderField(id,cards,label,side){
+  var el=$(id),h='';
+  for(var i=0;i<5;i++){
+    var c=cards[i];
+    if(c){
+      h+=zoneHtml(c,label).replace('<div class="stdl-zone monster occupied"', '<div class="stdl-zone monster occupied" data-side="'+side+'" data-location="4" data-sequence="'+i+'"');
+    }else h+='<div class="stdl-zone">'+label+'</div>';
+  }
+  h+='<div class="stdl-zone">EMZ</div><div class="stdl-zone">EMZ</div>';
+  el.innerHTML=h;
+}
+function renderSpell(id,cards,side){
+  var h='';
+  cards=cards||[];
+  for(var i=0;i<5;i++){
+    var c=cards[i];
+    if(c){
+      h+=zoneHtml(c,'S/T').replace('<div class="stdl-zone monster occupied"', '<div class="stdl-zone spell occupied" data-side="'+side+'" data-location="8" data-sequence="'+i+'"');
+    }else h+='<div class="stdl-zone spell">S/T</div>';
+  }
+  h+='<div class="stdl-zone">FIELD</div><div class="stdl-zone">P</div>';
+  $(id).innerHTML=h;
+}
+function render(){
+  state.previewMap=new Map();
+  $('#playerLP').textContent=state.playerLP;$('#botLP').textContent=state.botLP;
+  renderSpell('#botSpell',state.botSpellField,'1');renderField('#botMonsters',state.botField,'MONSTER','1');
+  renderField('#playerMonsters',state.playerField,'MONSTER','0');renderSpell('#playerSpell',state.playerSpellField,'0');
+  var hand=$('#playerHand');hand.innerHTML='';
+  state.playerHand.forEach(function(c){
+    var b=document.createElement('button');b.className='stdl-hand-card';
+    b.title=cardName(c)+' - '+atk(c)+' ATK';
+    var pk=previewKey(c);
+    state.previewMap.set(pk,c);
+    b.setAttribute('data-preview-key',pk); b.setAttribute('data-card-code',String(c.id||c.originalId||c.baseId||'')); b.setAttribute('data-location','2'); b.setAttribute('data-sequence',String(state.playerHand.indexOf(c))); b.setAttribute('data-side','0');
+
+    var u=img(c);
+    if(u){
+      b.innerHTML='<img alt="'+cardName(c).replace(/"/g,'')+'" src="'+u+'">';
+      var im=b.querySelector('img');
+      im.onerror=function(){ this.style.display='none'; this.parentNode.textContent=this.alt; this.parentNode.style.color='#fff'; this.parentNode.style.fontSize='7px'; };
+    }else{
+      b.textContent=cardName(c);
+      b.style.color='#fff';
+      b.style.fontSize='7px';
+    }
+    hand.appendChild(b);
+  });
+  $('#playerDeckCount').textContent=state.playerDeck.length;
+  $('#botDeckCount').textContent=state.botDeck.length;
+  $('#playerExtraCount').textContent=(state.playerExtra||[]).length;
+  $('#botExtraCount').textContent=(state.botExtra||[]).length;
+  $('#playerGyCount').textContent=(state.playerGY||[]).length;
