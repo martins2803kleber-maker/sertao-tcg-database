@@ -1,0 +1,166 @@
+unction(){respondInt(-1);real.pending=null;closeChoice();pumpReal()});
+  var confirm=choiceButton('CONFIRM',function(){respondIndices(selected);real.pending=null;closeChoice();pumpReal()},'primary');confirm.disabled=p.min>0;
+}
+function openPile(side,location,title,cards){
+  choiceOverlay.hidden=false;choiceTitle.textContent=title+' ('+cards.length+')';choiceText.textContent=side===0?'Right-click a card to use an available command.':'Public information.';
+  choiceCards.innerHTML='';choiceActions.innerHTML='';
+  cards.forEach(function(c,idx){
+    var b=document.createElement('button');b.className='stdl-choice-card';b.type='button';
+    b.dataset.cardCode=String(c.id||c.originalId||c.baseId||'');b.dataset.side=String(side);b.dataset.location=String(location);b.dataset.sequence=String(idx);
+    var u=img(c);b.innerHTML=(u?'<img src="'+u+'" alt="">':'')+'<span>'+escapeHtml(cardName(c))+'</span>';
+    b.onclick=function(){showCardPreview(c)};
+    if(side===0)b.oncontextmenu=function(e){showCardMenu(e,b)};
+    choiceCards.appendChild(b);
+  });
+  choiceButton('CLOSE',closeChoice,'primary');attachCardSelection();
+}
+function bindPiles(){
+  var maps=[
+    ['playerExtraPile',0,64,'EXTRA DECK',state.playerExtra],['playerGyPile',0,16,'GRAVEYARD',state.playerGY],['playerBanishedPile',0,32,'BANISHED',state.playerBanished],
+    ['botGyPile',1,16,'OPPONENT GY',state.botGY],['botBanishedPile',1,32,'OPPONENT BANISHED',state.botBanished]
+  ];
+  maps.forEach(function(x){var el=$('#'+x[0]);if(el)el.onclick=function(){openPile(x[1],x[2],x[3],x[4])}});
+  var pd=$('#playerDeckPile');if(pd)pd.onclick=function(){toast('DECK: '+state.playerDeck.length+' CARDS')};
+  var bd=$('#botDeckPile');if(bd)bd.onclick=function(){toast('OPPONENT DECK: '+state.botDeck.length+' CARDS')};
+  var be=$('#botExtraPile');if(be)be.onclick=function(){toast('OPPONENT EXTRA DECK: '+state.botExtra.length+' CARDS')};
+}
+function updatePromptUI(){
+  var p=real.pending;
+  if(!duelHint)return;
+  passChainBtn.hidden=true;
+  if(!real.active){duelHint.textContent='Cole um YDKE e inicie o duelo.';return}
+  if(!p){duelHint.textContent='OCGCore processando...';return}
+  if(p.player===1){duelHint.textContent='BOT pensando...';return}
+  if(p.msg===11)duelHint.textContent='MAIN PHASE - right-click a card to Summon, Set or Activate.';
+  else if(p.msg===10)duelHint.textContent='BATTLE PHASE - right-click an attacker or effect.';
+  else if(p.msg===16){duelHint.textContent='CHAIN - right-click a card to activate, or pass.';passChainBtn.hidden=!!p.forced}
+  else duelHint.textContent='Waiting for your selection...';
+}
+passChainBtn.onclick=function(){
+  if(real.pending&&real.pending.msg===16&&!real.pending.forced){respondInt(-1);real.pending=null;updatePromptUI();pumpReal()}
+};
+
+/* ==========================================================
+   SERTÃO TCG - REAL OCGCORE BETA
+   OCGCore is the source of legal actions/effect resolution.
+   The UI keeps the existing visual model and mirrors common actions.
+   ========================================================== */
+var REAL_BASE='../../assets/duellab/';
+var CARD_SCRIPT_BASE='https://cdn.jsdelivr.net/gh/ProjectIgnis/CardScripts@master/';
+var real={
+  ready:false, active:false, mod:null, duel:0, coreCards:[], coreById:new Map(),
+  botDecks:{}, pending:null, playerDeck:null, botDeck:null, busy:false, lastPlayer:0
+};
+
+function u32(dv,o){return dv.getUint32(o,true)}
+function i32(dv,o){return dv.getInt32(o,true)}
+function u64num(dv,o){ return Number(dv.getBigUint64(o,true)); }
+function readCardRef(dv,o,seq32){
+  var x={code:u32(dv,o),controller:dv.getUint8(o+4),location:dv.getUint8(o+5)};
+  if(seq32){x.sequence=u32(dv,o+6);x.next=o+10}else{x.sequence=dv.getUint8(o+6);x.next=o+7}
+  return x;
+}
+function splitPackets(bytes){
+  var out=[],pos=0;
+  var dv=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);
+  while(pos+4<=bytes.length){
+    var size=u32(dv,pos);pos+=4;
+    if(size<1||pos+size>bytes.length)break;
+    out.push(bytes.slice(pos,pos+size));pos+=size;
+  }
+  return out;
+}
+function cardByCode(code){ return state.byId.get(String(code)) || real.coreById.get(Number(code)) || {id:code,name:'Card '+code,atk:0,type:'Monster'}; }
+function mirrorRemoveHand(side,code){
+  var hand=side===0?state.playerHand:state.botHand;
+  var ix=hand.findIndex(function(c){return Number(c.id||c.baseId||c.originalId)===Number(code)});
+  if(ix>=0)return hand.splice(ix,1)[0];
+  return cardByCode(code);
+}
+function mirrorSummon(side,code){
+  var field=side===0?state.playerField:state.botField;
+  var card=mirrorRemoveHand(side,code);
+  if(field.length<5 && !field.some(function(c){return c===card}))field.push(card);
+  render();
+}
+function mirrorDraw(side,codes){
+  var hand=side===0?state.playerHand:state.botHand;
+  var deck=side===0?state.playerDeck:state.botDeck;
+  codes.forEach(function(code){
+    var ix=deck.findIndex(function(c){return Number(c.id||c.baseId||c.originalId)===Number(code)});
+    var card=ix>=0?deck.splice(ix,1)[0]:cardByCode(code);
+    hand.push(card);
+  });
+  render();
+}
+
+function locPool(side,loc){
+  if(loc===1)return side===0?state.playerDeck:state.botDeck;
+  if(loc===2)return side===0?state.playerHand:state.botHand;
+  if(loc===4)return side===0?state.playerField:state.botField;
+  if(loc===8)return side===0?state.playerSpellField:state.botSpellField;
+  if(loc===16)return side===0?state.playerGY:state.botGY;
+  if(loc===32)return side===0?state.playerBanished:state.botBanished;
+  if(loc===64)return side===0?state.playerExtra:state.botExtra;
+  return null;
+}
+function removeMirrorCard(side,loc,code,seq){
+  var pool=locPool(side,loc);if(!pool)return null;
+  if(loc===4||loc===8){
+    if(seq!=null&&seq>=0&&seq<pool.length){
+      var c=pool[seq];
+      if(c&&(!code||Number(c.id||c.baseId||c.originalId)===Number(code))){pool[seq]=null;return c}
+    }
+    for(var z=0;z<pool.length;z++){var cc=pool[z];if(cc&&(!code||Number(cc.id||cc.baseId||cc.originalId)===Number(code))){pool[z]=null;return cc}}
+    return null;
+  }
+  if(seq!=null&&seq>=0&&seq<pool.length){
+    var candidate=pool[seq];
+    if(candidate&&(!code||Number(candidate.id||candidate.baseId||candidate.originalId)===Number(code)))return pool.splice(seq,1)[0];
+  }
+  var ix=pool.findIndex(function(c){return c&&(!code||Number(c.id||c.baseId||c.originalId)===Number(code))});
+  return ix>=0?pool.splice(ix,1)[0]:null;
+}
+function addMirrorCard(side,loc,code,seq,card){
+  var pool=locPool(side,loc);if(!pool)return;
+  card=card||cardByCode(code);
+  if(loc===4||loc===8){
+    var slot=(seq!=null&&seq>=0&&seq<5)?seq:pool.findIndex(function(x){return !x});
+    if(slot<0)slot=0;pool[slot]=card;return;
+  }
+  if(seq!=null&&seq>=0&&seq<=pool.length)pool.splice(seq,0,card);else pool.push(card);
+}
+function mirrorMovePacket(pkt){
+  var dv=new DataView(pkt.buffer,pkt.byteOffset,pkt.byteLength),o=1;
+  var code=u32(dv,o);o+=4;
+  function li(){var x={controller:dv.getUint8(o),location:dv.getUint8(o+1),sequence:u32(dv,o+2),position:u32(dv,o+6)};o+=10;return x}
+  var prev=li(),cur=li();
+  var moved=removeMirrorCard(prev.controller,prev.location,code,prev.sequence);
+  addMirrorCard(cur.controller,cur.location,code,cur.sequence,moved||cardByCode(code));
+  render();
+}
+
+function setRealStatus(t,ok){
+  var p=$('#realPill'); if(!p)return;
+  p.textContent=t;
+  p.classList.toggle('real',!!ok);
+}
+async function loadRealResources(){
+  try{
+    setRealStatus('OCGCORE: carregando',false);
+    var bust='?v=v15';
+    var mod=await import(REAL_BASE+'engine/duellab_engine.js'+bust);
+    if(typeof mod.default==='function')await mod.default(REAL_BASE+'engine/duellab_engine_bg.wasm'+bust);
+    var info=await mod.init_engine();
+    var pair=await Promise.all([
+      fetch(REAL_BASE+'core/cards_core.json'+bust,{cache:'force-cache'}).then(function(r){if(!r.ok)throw Error('cards_core '+r.status);return r.json()}),
+      fetch(REAL_BASE+'core/bot_decks.json'+bust,{cache:'force-cache'}).then(function(r){if(!r.ok)throw Error('bot_decks '+r.status);return r.json()})
+    ]);
+    if(typeof mod.register_scripts!=='function'||typeof mod.clear_registered_scripts!=='function'){
+      throw Error('OCGCore browser bridge 0.3.0 is not available yet. Reload in a moment.');
+    }
+    real.mod=mod; real.coreCards=pair[0]; real.botDecks=pair[1]||{};
+    real.coreById=new Map(real.coreCards.map(function(c){return [Number(c.id),c]}));
+    real.ready=true;
+    setRealStatus('OCGCORE '+(info.version||'REAL')+' PRONTO',true);
+    log('<b>OCGCore:</b> motor real e dados Project Ignis carrega
