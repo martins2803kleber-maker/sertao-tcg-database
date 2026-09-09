@@ -1,12 +1,50 @@
 <article class="sertaotcg-post yugioh-post">
   <style>
-    .sertaotcg-post{max-width:980px;margin:0 auto;font-family:Arial,Helvetica,sans-serif;color:#202124;line-height:1.65}
-    .sertaotcg-post *{box-sizing:border-box}.sertaotcg-post h1{font-size:2rem;line-height:1.15;margin:0 0 8px}.sertaotcg-post h2{font-size:1.35rem;margin:34px 0 10px}.sertaotcg-post h3{font-size:1.16rem;margin:0 0 4px}.sertaotcg-post p{margin:10px 0}.post-meta{font-size:.92rem;opacity:.72;margin-bottom:22px}.hero-note{padding:18px 20px;border:1px solid #dedede;border-radius:14px;background:#fafafa;margin:20px 0 28px}.cards-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:18px 0 28px}.card-box{border:1px solid #dedede;border-radius:14px;padding:16px;background:#fff}.card-box img{display:block;width:206px;max-width:100%;height:auto;margin:0 auto 14px;border-radius:7px}.card-code{font-size:.82rem;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.04em}.card-stats{font-size:.92rem;font-weight:700;margin:6px 0 10px}.tag{display:inline-block;padding:3px 8px;border:1px solid #d8d8d8;border-radius:999px;font-size:.78rem;margin:2px 4px 2px 0}.analysis-box{border-left:4px solid #333;padding:2px 0 2px 16px;margin:20px 0}.source-box{font-size:.9rem;border-top:1px solid #ddd;margin-top:32px;padding-top:16px;opacity:.78}.source-box a{word-break:break-word}.table-wrap{overflow-x:auto}.summary-table{width:100%;border-collapse:collapse;margin:12px 0 24px}.summary-table th,.summary-table td{border-bottom:1px solid #ddd;text-align:left;padding:10px 8px;vertical-align:top}.summary-table th{font-size:.86rem;text-transform:uppercase;letter-spacing:.03em}@media(max-width:600px){.sertaotcg-post h1{font-size:1.65rem}.cards-grid{grid-template-columns:1fr}}
+    .sertaotcg-post{width:100%;max-width:1220px;margin:0 auto;padding:0 16px;font-family:Arial,Helvetica,sans-serif;color:#202124;line-height:1.65}
+    .sertaotcg-post *{box-sizing:border-box}
+    .sertaotcg-post h1{font-size:2.2rem;line-height:1.12;margin:0 0 10px}
+    .sertaotcg-post h2{font-size:1.45rem;margin:36px 0 12px}
+    .sertaotcg-post h3{font-size:1.16rem;margin:0 0 4px}
+    .sertaotcg-post p{margin:10px 0}
+    .post-meta{font-size:.92rem;opacity:.78;margin-top:8px}
+    .post-cover{position:relative;overflow:hidden;min-height:430px;border-radius:22px;margin:0 0 26px;background:#10131a;box-shadow:0 12px 34px rgba(0,0,0,.18)}
+    .post-cover-bg{position:absolute;inset:-20px;background:linear-gradient(90deg,rgba(7,10,17,.96) 0%,rgba(7,10,17,.80) 43%,rgba(7,10,17,.30) 70%,rgba(7,10,17,.08) 100%),url('https://cdn.ygorganization.com/2026/09/IMPH-JP028_UR-206x300.webp') center 36%/cover no-repeat;filter:blur(3px) saturate(1.1);transform:scale(1.08)}
+    .post-cover-content{position:relative;z-index:2;min-height:430px;display:grid;grid-template-columns:minmax(0,1.35fr) minmax(260px,.65fr);align-items:center;gap:26px;padding:34px 42px;color:#fff}
+    .cover-kicker{display:inline-block;font-size:.78rem;font-weight:800;letter-spacing:.12em;text-transform:uppercase;padding:6px 10px;border:1px solid rgba(255,255,255,.35);border-radius:999px;margin-bottom:14px;background:rgba(255,255,255,.08)}
+    .post-cover h1{font-size:clamp(2rem,4vw,3.45rem);max-width:760px;text-shadow:0 2px 12px rgba(0,0,0,.4)}
+    .post-cover .post-meta{color:rgba(255,255,255,.82)}
+    .cover-card{display:flex;justify-content:center;align-items:center}
+    .cover-card img{width:min(245px,100%);height:auto;border-radius:10px;box-shadow:0 18px 38px rgba(0,0,0,.5);transform:rotate(2deg)}
+    .hero-note{padding:20px 22px;border:1px solid #dedede;border-radius:16px;background:#fafafa;margin:20px 0 30px}
+    .cards-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;margin:18px 0 30px}
+    .card-box{border:1px solid #dedede;border-radius:16px;padding:18px;background:#fff;box-shadow:0 5px 18px rgba(0,0,0,.05)}
+    .card-box img{display:block;width:220px;max-width:100%;height:auto;margin:0 auto 14px;border-radius:8px}
+    .card-code{font-size:.82rem;font-weight:700;opacity:.65;text-transform:uppercase;letter-spacing:.04em}
+    .card-stats{font-size:.92rem;font-weight:700;margin:6px 0 10px}
+    .tag{display:inline-block;padding:3px 8px;border:1px solid #d8d8d8;border-radius:999px;font-size:.78rem;margin:2px 4px 2px 0}
+    .analysis-box{border-left:4px solid #333;padding:4px 0 4px 18px;margin:20px 0}
+    .source-box{font-size:.9rem;border-top:1px solid #ddd;margin-top:34px;padding-top:16px;opacity:.78}
+    .source-box a{word-break:break-word}
+    .table-wrap{overflow-x:auto}
+    .summary-table{width:100%;border-collapse:collapse;margin:12px 0 24px}
+    .summary-table th,.summary-table td{border-bottom:1px solid #ddd;text-align:left;padding:11px 9px;vertical-align:top}
+    .summary-table th{font-size:.86rem;text-transform:uppercase;letter-spacing:.03em}
+    @media(max-width:900px){.cards-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.post-cover-content{grid-template-columns:1fr .55fr;padding:30px}}
+    @media(max-width:650px){.sertaotcg-post{padding:0 10px}.cards-grid{grid-template-columns:1fr}.post-cover{min-height:auto;border-radius:16px}.post-cover-content{min-height:auto;grid-template-columns:1fr;padding:28px 22px}.cover-card{display:none}.post-cover h1{font-size:2rem}}
   </style>
 
-  <header>
-    <h1>OCG: IMPH revela Reindsurm, novo arquétipo Ritual de Insetos</h1>
-    <div class="post-meta">Yu-Gi-Oh! OCG • Immortal Phoenix (IMPH) • 9 de setembro de 2026</div>
+  <header class="post-cover">
+    <div class="post-cover-bg"></div>
+    <div class="post-cover-content">
+      <div>
+        <span class="cover-kicker">Yu-Gi-Oh! OCG • Immortal Phoenix</span>
+        <h1>OCG: IMPH revela Reindsurm, novo arquétipo Ritual de Insetos</h1>
+        <div class="post-meta">10 novas cartas • 9 de setembro de 2026</div>
+      </div>
+      <div class="cover-card">
+        <img src="https://cdn.ygorganization.com/2026/09/IMPH-JP028_UR-206x300.webp" alt="Reindsurm Giriakarma em destaque">
+      </div>
+    </div>
   </header>
 
   <div class="hero-note">
