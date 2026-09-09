@@ -1,0 +1,119 @@
+{
+  "updatedAt": "2026-09-09",
+  "game": "Yu-Gi-Oh!",
+  "format": "OCG",
+  "set": {
+    "code": "IMPH",
+    "name": "Immortal Phoenix",
+    "release": "2026-10",
+    "status": "revealed"
+  },
+  "archetype": "Reindsurm",
+  "summary": "Novo arquétipo de Insetos Ritual revelado para Immortal Phoenix. O tema recicla Insetos e Dragões do Cemitério, realiza Invocações-Ritual em sequência e ganha efeitos adicionais contra decks que mantêm monstros Dragão no campo ou no Cemitério.",
+  "source": {
+    "primary": "https://www.yugiohmeta.com/articles/news/sep-9-2026/IMPH",
+    "translationReference": "https://ygorganization.com/whereisthedragonfly"
+  },
+  "cards": [
+    {
+      "code": "IMPH-JP024",
+      "name": "Reindsurm Amurusa",
+      "kind": "Monster",
+      "type": "Insect / Ritual / Effect",
+      "attribute": "WIND",
+      "level": 4,
+      "atk": 1000,
+      "def": 2200,
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP024-206x300.webp",
+      "effectSummaryPt": "Ao ser Invocado por Ritual, busca 2 monstros Reindsurm que não sejam de VENTO. Se for enviado ao Cemitério fora de batalha, pode iniciar outra Invocação-Ritual de um Inseto, usando monstros da mão/campo e também reciclando Insetos ou Dragões do Cemitério para o Deck."
+    },
+    {
+      "code": "IMPH-JP025",
+      "name": "Reindsurm Luvian",
+      "kind": "Monster",
+      "type": "Insect / Ritual / Effect",
+      "attribute": "WATER",
+      "level": 4,
+      "atk": 1900,
+      "def": 1100,
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP025-206x300.webp",
+      "effectSummaryPt": "Ao ser Invocado por Ritual, adiciona 2 Magias/Armadilhas Reindsurm do Deck à mão. Quando vai ao Cemitério fora de batalha, também permite realizar outra Invocação-Ritual de um Inseto usando mão, campo e reciclagem do Cemitério."
+    },
+    {
+      "code": "IMPH-JP026",
+      "name": "Reindsurm Carcasas",
+      "kind": "Monster",
+      "type": "Insect / Ritual / Effect",
+      "attribute": "LIGHT",
+      "level": 4,
+      "atk": 2000,
+      "def": 1300,
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP026-206x300.webp",
+      "effectSummaryPt": "Ao ser Invocado por Ritual, envia 2 cards Reindsurm do Deck ao Cemitério, preparando recursos e efeitos. Se for enviado ao Cemitério fora de batalha, pode converter esses recursos em uma nova Invocação-Ritual de Inseto."
+    },
+    {
+      "code": "IMPH-JP027",
+      "name": "Reindsurm Gigalovendra",
+      "kind": "Monster",
+      "type": "Insect / Ritual / Effect",
+      "attribute": "FIRE",
+      "level": 8,
+      "atk": 3000,
+      "def": 1100,
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP027_SR-206x300.webp",
+      "effectSummaryPt": "Na mão, pode se enviar junto de outro card ao Cemitério para buscar um Reindsurm que não seja de FOGO. Depois de Invocada por Ritual — ou quando o oponente realiza Invocação-Especial — pode embaralhar até 2 monstros do campo no Deck. Também consegue retornar do Cemitério à mão se houver um Reindsurm de ÁGUA junto dela."
+    },
+    {
+      "code": "IMPH-JP028",
+      "name": "Reindsurm Giriakarma",
+      "kind": "Monster",
+      "type": "Insect / Ritual / Effect",
+      "attribute": "DARK",
+      "level": 8,
+      "atk": 3300,
+      "def": 1300,
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP028_UR-206x300.webp",
+      "effectSummaryPt": "Enquanto estiver Invocada por Ritual, pode negar um efeito de monstro ativado no campo ou Cemitério; em seguida, pode devolver ao Deck um monstro do campo do oponente e outro do Cemitério dele. Se um deles for Dragão, seu ATK pode dobrar. Se estiver no Cemitério junto de um Reindsurm de LUZ, retorna à mão."
+    },
+    {
+      "code": "IMPH-JP055",
+      "name": "Reindsurm Conquest",
+      "kind": "Spell",
+      "type": "Ritual Spell",
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP055-206x300.webp",
+      "effectSummaryPt": "Magia Ritual central do arquétipo. Permite Invocar por Ritual múltiplos Insetos da mão ao reciclar Insetos ou Dragões dos Cemitérios para o Deck, respeitando a soma de Níveis necessária. No Cemitério, pode voltar à mão ao enviar um Inseto da mão ou campo ao Cemitério."
+    },
+    {
+      "code": "IMPH-JP056",
+      "name": "Reindsurm Carnation",
+      "kind": "Spell",
+      "type": "Field Spell",
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP056-206x300.webp",
+      "effectSummaryPt": "Protege os efeitos ativados de Reindsurm contra negação quando há um Reindsurm de Nível 8+ no seu campo e/ou um Dragão no campo ou Cemitério adversário. Uma vez por turno, troca um Reindsurm ou Dragão da mão/campo por um Inseto de mesmo Nível e nome diferente no Deck."
+    },
+    {
+      "code": "IMPH-JP057",
+      "name": "Reindsurm Butterfly",
+      "kind": "Spell",
+      "type": "Normal Spell",
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP057_R-206x300.webp",
+      "effectSummaryPt": "Envia 2 monstros do Deck ao Cemitério, com pelo menos 1 Inseto, mas restringe suas Invocações-Especiais a Insetos até o fim do próximo turno. Do Cemitério, pode ser banida após uma Invocação-Ritual de Inseto para dar +800 ATK/DEF aos Reindsurm que você controla."
+    },
+    {
+      "code": "IMPH-JP058",
+      "name": "Reindsurm Practice",
+      "kind": "Spell",
+      "type": "Normal Spell",
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP058_R-206x300.webp",
+      "effectSummaryPt": "Busca 2 monstros Reindsurm, depois envia 1 card da mão ao Cemitério. Se o oponente tiver um Dragão no campo ou Cemitério, ainda pode recuperar um Inseto do seu Cemitério. Depois de uma Invocação-Ritual de Inseto, pode ser banida do Cemitério para colocar diretamente a Magia de Campo Reindsurm do Deck."
+    },
+    {
+      "code": "IMPH-JP076",
+      "name": "Reindsurm Encounter",
+      "kind": "Trap",
+      "type": "Counter Trap",
+      "image": "https://cdn.ygorganization.com/2026/09/IMPH-JP076-206x300.webp",
+      "effectSummaryPt": "Contra-Armadilha de negação universal enquanto você controla um Reindsurm. Após negar, pode adicionar um Reindsurm do Deck ou Cemitério à mão e então enviar um Inseto do seu campo ao Cemitério. No Cemitério, pode se colocar no fundo do Deck no lugar da destruição de um Reindsurm."
+    }
+  ]
+}
