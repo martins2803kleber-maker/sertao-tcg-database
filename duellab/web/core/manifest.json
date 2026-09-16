@@ -1,7 +1,7 @@
 {
   "source": "ProjectIgnis/BabelCDB",
-  "upstream": "b3a509312f9414961f3f6cd2e4b67ddb25e3dce1",
-  "cardCount": 20821,
+  "upstream": "a58acf927af3d1de6e50ee8f216241d4d596dfd3",
+  "cardCount": 20827,
   "databases": [
     "cards.cdb",
     "cards-unofficial.cdb",
@@ -10,6 +10,7 @@
     "prerelease-dbgv.cdb",
     "prerelease-imph.cdb",
     "prerelease-others.cdb",
+    "prerelease-rv02.cdb",
     "prerelease-yac1.cdb"
   ],
   "bridgeSchema": "CardRecordInput-v1"
