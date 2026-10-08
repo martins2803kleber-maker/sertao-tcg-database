@@ -1,7 +1,7 @@
 {
   "source": "ProjectIgnis/BabelCDB",
-  "upstream": "fdf92aea31033cd6c44afa89987c5e00665205e2",
-  "cardCount": 20864,
+  "upstream": "5c5cab70ee98419c79103cf903aba08bcc5f9890",
+  "cardCount": 20866,
   "databases": [
     "cards.cdb",
     "cards-unofficial.cdb",
