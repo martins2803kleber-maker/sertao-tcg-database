@@ -1,13 +1,12 @@
 {
   "source": "ProjectIgnis/BabelCDB",
-  "upstream": "e719814006a9ed7e429378dda37801bf92a0722a",
+  "upstream": "d56868ae09e5a79c0dc3b0f3e5b41c4cd831a109",
   "cardCount": 21008,
   "databases": [
     "cards.cdb",
     "cards-unofficial.cdb",
     "prerelease-27pp.cdb",
     "prerelease-betb-en.cdb",
-    "prerelease-dbgv.cdb",
     "prerelease-imph-en.cdb",
     "prerelease-imph.cdb",
     "prerelease-mvb1.cdb",
@@ -15,7 +14,8 @@
     "prerelease-paso.cdb",
     "prerelease-rv02.cdb",
     "prerelease-yac1.cdb",
-    "release-betb.cdb"
+    "release-betb.cdb",
+    "release-dbgv.cdb"
   ],
   "bridgeSchema": "CardRecordInput-v1"
 }
